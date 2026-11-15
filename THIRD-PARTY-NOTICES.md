@@ -12,6 +12,10 @@ projects. Their frame layout, memory addresses and model tables served as the re
 The battery voltage table (`PulsarBattery`) is not taken from either project. It comes from
 values measured in the vendor app's configuration (`BatteryParam`); no code was taken from it.
 
+The plugin icon (`icon.png`) is rendered by `tools/icon/make_icon.py` from the computer mouse of
+**microsoft/fluentui-emoji** (https://github.com/microsoft/fluentui-emoji),
+Copyright (c) Microsoft Corporation, also under the MIT License below.
+
 ## MIT License
 
 ```text

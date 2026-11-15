@@ -4,3 +4,6 @@ dist/
 *.user
 .vs/
 .idea/
+
+# Icon generator preview, regenerated on every run
+tools/icon/preview.png
