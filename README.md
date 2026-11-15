@@ -60,7 +60,8 @@ replugged or G HUB takes over again. Reading never changes the mode.
 SteelSeries mice from the [rivalcfg](https://github.com/flozz/rivalcfg) device list (76 USB ids:
 Aerox 3/5/9, Prime, Prime+, Prime Mini, Prime Wireless, Rival 3/5/95/100/105/106/110/300/300S/310/
 500/600/650/700/710, Rival 3 (Wireless) Gen 2, Sensei 310/TEN/[RAW], Kana v2, Kinzu v2). Only the
-**Rival 650 Wireless on the cable (`1038:172b`) is tested**; every other id, including the Rival 650
+**Rival 650 Wireless on the cable (`1038:172b`) is tested** (battery, setting the polling rate
+and the DPI); every other id, including the Rival 650
 dongle (`1038:1726`), is untested.
 
 - Battery is shown for the mice that report it: Rival 650, Rival 3 Wireless (Gen 2), Aerox 3/5/9
