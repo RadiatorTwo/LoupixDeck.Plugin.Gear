@@ -88,8 +88,14 @@ internal static class PulsarModels
             _ => 1000,
         };
 
-        return PollingCodes.Select(c => c.Hz).Where(hz => hz <= max).Order().ToArray();
+        return RatesUpTo(max);
     }
+
+    // One cached array per ceiling: the registry reads this on every poll.
+    private static readonly Dictionary<int, int[]> RatesByMax = new[] { 1000, 2000, 4000, 8000 }
+        .ToDictionary(max => max, max => PollingCodes.Select(c => c.Hz).Where(hz => hz <= max).Order().ToArray());
+
+    private static IReadOnlyList<int> RatesUpTo(int max) => RatesByMax[max];
 
     public static bool TryCodeForHz(int hz, out byte code)
     {

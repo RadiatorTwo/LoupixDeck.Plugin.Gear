@@ -542,12 +542,21 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
                 return false;
             }
 
-            bool changed = entry.State != state;
-            entry.State = state;
+            // The allowed rates compare by reference in the record; a provider that rebuilds an equal list must not count as a change.
+            bool changed = !SameState(entry.State, state);
+            if (changed)
+            {
+                entry.State = state;
+            }
             _snapshot = BuildSnapshot();
             return changed;
         }
     }
+
+    private static bool SameState(GearDeviceState? previous, GearDeviceState current) =>
+        previous is not null
+        && (previous.AllowedPollingRates ?? []).SequenceEqual(current.AllowedPollingRates ?? [])
+        && previous == current with { AllowedPollingRates = previous.AllowedPollingRates };
 
     // Caller holds _lock.
     private GearDeviceState[] BuildSnapshot() => _entries.Where(e => e.State != null).Select(e => e.State!).ToArray();

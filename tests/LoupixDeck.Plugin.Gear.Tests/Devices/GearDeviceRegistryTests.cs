@@ -74,6 +74,22 @@ public sealed class GearDeviceRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task Registry_UnchangedAsleepDevice_RaisesNoChangedWhenRatesAreRebuiltEachCall()
+    {
+        await PlugInAsync(configure: d => d.Awake = false);
+        int changes = 0;
+        _registry.Changed += () => changes++;
+
+        for (int i = 0; i < 3; i++)
+        {
+            _time.Advance(TimeSpan.FromSeconds(60));
+            await _registry.TickAsync();
+        }
+
+        Assert.Equal(0, changes);
+    }
+
+    [Fact]
     public async Task Registry_Asleep_ChecksStatusOnlyEvery60Seconds()
     {
         FakeDevice device = await PlugInAsync(configure: d => d.Awake = false);
@@ -408,7 +424,8 @@ public sealed class GearDeviceRegistryTests : IDisposable
 
         public bool Tested => true;
 
-        public IReadOnlyList<int> AllowedPollingRates { get; } = [500, 1000, 2000, 4000, 8000];
+        // A new list with the same contents on every call, like a provider that builds it on demand.
+        public IReadOnlyList<int> AllowedPollingRates => [500, 1000, 2000, 4000, 8000];
 
         public Task<bool> RefreshIdentityAsync(CancellationToken ct)
         {
