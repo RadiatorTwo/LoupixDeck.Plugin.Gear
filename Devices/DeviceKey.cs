@@ -9,4 +9,10 @@ internal static class DeviceKey
         string key = $"pulsar:model:{modelId:x4}";
         return string.IsNullOrEmpty(mouseSerial) ? key : $"{key}:{mouseSerial}";
     }
+
+    /// <summary>Returns <c>logitech:model:4082:a1b2c3d4</c> (model id, then the unit id), both lowercase hex.</summary>
+    public static string ForLogitech(ushort modelId, ReadOnlySpan<byte> unitId)
+    {
+        return $"logitech:model:{modelId:x4}:{Convert.ToHexStringLower(unitId)}";
+    }
 }
