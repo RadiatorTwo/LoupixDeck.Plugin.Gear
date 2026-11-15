@@ -9,5 +9,12 @@
   "ERROR": "ERROR",
   "HZ": "HZ",
   "DPI": "DPI",
-  "LINK": "ENLACE"
+  "LINK": "ENLACE",
+  "POLLING": "SONDEO",
+  "STAGE": "NIVEL",
+  "No mouse detected": "Ningún ratón detectado",
+  "Pages": "Páginas",
+  "Next": "Siguiente",
+  "Previous": "Anterior",
+  "Polling rate": "Frecuencia de sondeo"
 }

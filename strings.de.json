@@ -9,5 +9,12 @@
   "ERROR": "FEHLER",
   "HZ": "HZ",
   "DPI": "DPI",
-  "LINK": "LINK"
+  "LINK": "LINK",
+  "POLLING": "ABFRAGERATE",
+  "STAGE": "STUFE",
+  "No mouse detected": "Keine Maus erkannt",
+  "Pages": "Seiten",
+  "Next": "Weiter",
+  "Previous": "Zurück",
+  "Polling rate": "Abfragerate"
 }

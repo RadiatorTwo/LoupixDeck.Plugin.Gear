@@ -14,7 +14,7 @@ namespace LoupixDeck.Plugin.Gear.Devices;
 /// right after it wakes. Devices are tracked by HID path: a path that is still present keeps its device instance,
 /// a path that vanished has its instance disposed. All device I/O runs on the thread pool.
 /// </remarks>
-internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<IGearProvider> providers, IPluginLogger logger, TimeProvider time) : IGearDeviceSource, IDisposable
+internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<IGearProvider> providers, IPluginLogger logger, TimeProvider time) : IGearDeviceControl, IDisposable
 {
     public static readonly TimeSpan ScanInterval = TimeSpan.FromSeconds(5);
     public static readonly TimeSpan AwakeInterval = TimeSpan.FromMinutes(5);
