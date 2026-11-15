@@ -1,6 +1,6 @@
 # LoupixDeck.Plugin.Gear
 
-Detects gaming mice and shows battery, polling rate and DPI on a Loupedeck device. Polling rate and
+Detects gaming mice (Pulsar and Logitech) and shows battery, polling rate and DPI on a Loupedeck device. Polling rate and
 DPI can be switched with a press.
 
 The plugin supports **Windows and Linux** and needs LoupixDeck with Plugin SDK 1.31 or newer. Mice
@@ -21,6 +21,34 @@ Pulsar mice that speak the 17-byte Nordic protocol:
 
 "Untested" means the id comes from the protocol references and has not been tried on hardware.
 The X2A v3 (`3710:5403`, `3710:3408`) uses a different protocol and is not supported.
+
+### Logitech
+
+Logitech mice that speak HID++ 2.0, either through a Unifying, Bolt or LIGHTSPEED receiver (all six
+slots are checked; keyboards and empty slots are not shown) or directly on a USB cable. Bluetooth
+is not covered. The plugin reads these HID++ features and offers what the mouse has:
+
+| Feature | HID++ id |
+|---|---|
+| Battery (first one the mouse has) | `0x1004`, `0x1001`, `0x1000` |
+| Polling rate (first one the mouse has) | `0x8061`, `0x8060` |
+| DPI | `0x2201` |
+
+Everything about Logitech is **untested** except what the read-only hardware smoke test covers
+(a G502 Proteus Spectrum on a cable: name, polling rate and DPI read). Writing the polling rate
+and the DPI, the battery and the receiver routes have not been tried. The plugin never switches
+the onboard profile mode.
+
+- The key of a mouse is `logitech:model:<model id>:<unit id>`; it is the same over receiver and
+  cable, so a button keeps working when you change the connection.
+- HID++ has no list of DPI stages, so `next` and `previous` cycle a fixed ladder (400, 800, 1600,
+  3200, 6400, 12800, 25600 DPI, limited to what the sensor supports, plus the current value). A
+  DPI value snaps to the nearest value the sensor supports; a value outside the sensor range is
+  rejected.
+- The battery percentage of mice that only report a voltage is estimated with a generic Li-ion
+  curve and may differ from G HUB.
+- Mice that only report DPI through `0x2202` (extended DPI) show no DPI, and devices that only
+  speak HID++ 1.0 are not supported.
 
 ## Commands
 
@@ -55,7 +83,10 @@ itself. To give your user access, create `/etc/udev/rules.d/70-loupixdeck-gear.r
 ```text
 KERNEL=="hidraw*", ATTRS{idVendor}=="3710", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="3554", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="046d", TAG+="uaccess"
 ```
+
+The `046d` line is for Logitech receivers and mice.
 
 Then reload the rules and replug the dongle:
 
@@ -80,5 +111,6 @@ loupix install       # copies the plugin into the LoupixDeck plugins folder
 
 ## Third-party
 
-The protocol was re-implemented from MIT-licensed projects; see
+The Pulsar protocol was re-implemented from MIT-licensed projects. The Logitech provider ports
+code and logic from openlogi-net (MIT) and openlogi-hidpp (0BSD); see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

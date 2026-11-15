@@ -1,6 +1,6 @@
 # LoupixDeck.Plugin.Gear
 
-LoupixDeck plugin that detects gaming mice (Pulsar first) and shows battery, polling rate and DPI.
+LoupixDeck plugin that detects gaming mice (Pulsar, Logitech over HID++ 2.0) and shows battery, polling rate and DPI.
 
 ## Plugin skeleton
 
