@@ -67,7 +67,7 @@ internal sealed class LogitechDevice : IGearDevice
 
     public string Name => _profile is { MarketingName.Length: > 0 } p ? $"{VendorPrefix} {WithoutVendor(p.MarketingName)}" : $"{VendorPrefix} mouse";
 
-    public string ShortName => _profile is { MarketingName.Length: > 0 } p ? WithoutVendor(p.MarketingName) : "mouse";
+    public string ShortName => _profile is { MarketingName.Length: > 0 } p ? LogitechDecoding.ShortModelName(WithoutVendor(p.MarketingName)) : "mouse";
 
     public GearLink Link => _profile is not { } p
         ? GearLink.Unknown

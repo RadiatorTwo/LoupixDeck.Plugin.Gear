@@ -5,6 +5,16 @@ namespace LoupixDeck.Plugin.Gear.Tests.Providers.Logitech;
 
 public sealed class LogitechDecodingTests
 {
+    [Theory]
+    [InlineData("Tunable RGB Gaming Mouse G502", "G502")]
+    [InlineData("G502 X PLUS", "G502 X PLUS")]
+    [InlineData("PRO X SUPERLIGHT 2", "PRO X SUPERLIGHT 2")]
+    [InlineData("Wireless Gaming Mouse G903 HERO", "G903 HERO")]
+    public void ShortModelName_StartsAtTheModelNumber(string name, string expected)
+    {
+        Assert.Equal(expected, LogitechDecoding.ShortModelName(name));
+    }
+
     private static byte[] Payload(params byte[] bytes) => [.. bytes, .. new byte[16 - bytes.Length]];
 
     [Fact]

@@ -6,6 +6,7 @@
 // The DPI ladder, the key and the link rules are this plugin's own.
 using System.Buffers.Binary;
 using System.Text;
+using System.Text.RegularExpressions;
 using LoupixDeck.Plugin.Gear.Devices;
 
 namespace LoupixDeck.Plugin.Gear.Providers.Logitech;
@@ -57,6 +58,16 @@ internal static class LogitechDecoding
     public static bool IsPointingDevice(byte deviceType) => deviceType is TypeMouse or TypeTrackpad or TypeTrackball;
 
     /// <summary>Joins the name chunks (function 1) and cuts them to the announced length (function 0).</summary>
+    /// <summary>
+    /// Name for narrow displays: from the G model number on when the marketing name puts it last
+    /// (<c>Tunable RGB Gaming Mouse G502</c> becomes <c>G502</c>); otherwise the name unchanged.
+    /// </summary>
+    public static string ShortModelName(string name)
+    {
+        Match match = Regex.Match(name, @"\bG\d{3,4}\b");
+        return match.Success && match.Index > 0 ? name[match.Index..] : name;
+    }
+
     public static string AssembleName(int length, IEnumerable<byte[]> chunks)
     {
         List<byte> bytes = [];
