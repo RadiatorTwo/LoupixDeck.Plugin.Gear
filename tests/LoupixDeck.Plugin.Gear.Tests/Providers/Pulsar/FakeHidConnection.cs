@@ -35,6 +35,11 @@ internal sealed class FakeHidConnection(Func<byte[], IEnumerable<byte[]>>? respo
         }
     }
 
+    /// <summary>Reports sent through the interrupt write path.</summary>
+    public List<byte[]> Written { get; } = [];
+
+    public void WriteReport(ReadOnlySpan<byte> report) => Written.Add(report.ToArray());
+
     public int Read(Span<byte> buffer, TimeSpan timeout)
     {
         if (ReadFailure is not null)

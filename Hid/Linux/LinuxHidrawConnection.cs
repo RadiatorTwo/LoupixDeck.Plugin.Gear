@@ -59,6 +59,10 @@ internal sealed partial class LinuxHidrawConnection : IHidConnection
         }
     }
 
+    // hidraw has one write path: write() sends the report through the interrupt OUT pipe (or SET_REPORT if the
+    // device has none), so this is the same call as SendOutputReport.
+    public void WriteReport(ReadOnlySpan<byte> report) => SendOutputReport(report);
+
     public unsafe int Read(Span<byte> buffer, TimeSpan timeout)
     {
         long deadline = Environment.TickCount64 + (long)timeout.TotalMilliseconds;

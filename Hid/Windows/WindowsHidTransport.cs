@@ -47,7 +47,7 @@ internal sealed partial class WindowsHidTransport : IHidTransport
             throw new IOException($"Could not open HID device '{device.Path}' (error {error}).");
         }
 
-        return new WindowsHidConnection(handle, device.InputLength);
+        return new WindowsHidConnection(handle, device.InputLength, device.OutputLength);
     }
 
     /// <summary>Reads attributes and capabilities through a zero-access handle; null if the device is unusable.</summary>

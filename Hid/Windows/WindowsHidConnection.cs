@@ -5,7 +5,7 @@ using Microsoft.Win32.SafeHandles;
 namespace LoupixDeck.Plugin.Gear.Hid.Windows;
 
 /// <summary>
-/// An overlapped HID handle: output reports go out through <c>HidD_SetOutputReport</c>, input
+/// An overlapped HID handle: output reports go out through <c>HidD_SetOutputReport</c> or <c>WriteFile</c>, input
 /// reports are read through an async <see cref="FileStream"/> with a cancellable timeout.
 /// </summary>
 [SupportedOSPlatform("windows")]
@@ -14,11 +14,13 @@ internal sealed class WindowsHidConnection : IHidConnection
     private readonly SafeFileHandle _handle;
     private readonly FileStream _stream;
     private readonly int _inputLength;
+    private readonly int _outputLength;
 
-    public WindowsHidConnection(SafeFileHandle handle, int inputLength)
+    public WindowsHidConnection(SafeFileHandle handle, int inputLength, int outputLength)
     {
         _handle = handle;
         _inputLength = inputLength;
+        _outputLength = outputLength;
         // bufferSize 0: no FileStream buffering, every read is one input report.
         _stream = new FileStream(handle, FileAccess.ReadWrite, 0, isAsync: true);
     }
@@ -32,6 +34,15 @@ internal sealed class WindowsHidConnection : IHidConnection
                 throw new IOException($"HidD_SetOutputReport failed (error {Marshal.GetLastWin32Error()}).");
             }
         }
+    }
+
+    public void WriteReport(ReadOnlySpan<byte> report)
+    {
+        // WriteFile on a HID handle must carry exactly the collection's output report length (else error 87).
+        int length = Math.Max(_outputLength, report.Length);
+        byte[] padded = new byte[length];
+        report.CopyTo(padded);
+        _stream.Write(padded, 0, padded.Length);
     }
 
     public int Read(Span<byte> buffer, TimeSpan timeout)
