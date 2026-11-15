@@ -50,7 +50,9 @@ internal sealed class PulsarDevice : IGearDevice
 
     public GearLink Link => _deviceInfo is { } i ? PulsarModels.LinkFromByte(i.Link) : GearLink.Unknown;
 
-    public GearCapabilities Capabilities => GearCapabilities.Battery | GearCapabilities.PollingRate;
+    // The DPI register layout is only established for the X2 CrazyLight (see PulsarDpi).
+    public GearCapabilities Capabilities => GearCapabilities.Battery | GearCapabilities.PollingRate
+        | (_deviceInfo?.ModelId == PulsarModels.X2CrazyLightModelId ? GearCapabilities.Dpi : GearCapabilities.None);
 
     public bool Tested { get; }
 
@@ -157,11 +159,107 @@ internal sealed class PulsarDevice : IGearDevice
         }
     }
 
-    public Task<GearDpiState?> ReadDpiAsync(CancellationToken ct) => throw new NotSupportedException();
+    /// <summary>The stages stored in the mouse and the 0-based active stage; null if it did not answer or the data is inconsistent.</summary>
+    public async Task<GearDpiState?> ReadDpiAsync(CancellationToken ct)
+    {
+        EnsureDpiModel();
+        byte[]? header = await ReadMemoryAsync(PulsarDpi.StageCountAddress, 4, ct);
+        if (header is null
+            || header[1] != (byte)(0x55 - header[0])
+            || header[3] != (byte)(0x55 - header[2]))
+        {
+            return null;
+        }
 
-    public Task SetDpiStageAsync(int stage, CancellationToken ct) => throw new NotSupportedException();
+        int count = header[0];
+        int active = header[2];
+        if (count is < 1 or > PulsarDpi.MaxStages || active >= count)
+        {
+            return null;
+        }
 
-    public Task SetDpiValueAsync(int dpi, CancellationToken ct) => throw new NotSupportedException();
+        byte[] records = new byte[count * PulsarDpi.StageRecordSize];
+        for (int offset = 0; offset < records.Length; offset += 8)
+        {
+            byte[]? chunk = await ReadMemoryAsync((ushort)(PulsarDpi.StageBaseAddress + offset), (byte)Math.Min(8, records.Length - offset), ct);
+            if (chunk is null)
+            {
+                return null;
+            }
+
+            chunk.CopyTo(records, offset);
+        }
+
+        int[] stages = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            if (!PulsarDpi.TryDecode(records.AsSpan(i * PulsarDpi.StageRecordSize, PulsarDpi.StageRecordSize), out stages[i]))
+            {
+                return null;
+            }
+        }
+
+        return new GearDpiState(stages, active);
+    }
+
+    /// <summary>Makes the 0-based stage the active one.</summary>
+    public async Task SetDpiStageAsync(int stage, CancellationToken ct)
+    {
+        EnsureDpiModel();
+        GearDpiState state = await ReadDpiOrThrowAsync(ct);
+        if (stage < 0 || stage >= state.Stages.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(stage), stage, "No such DPI stage.");
+        }
+
+        await WriteDpiAsync(PulsarDpi.ActiveStageWrite(stage), async () => (await ReadDpiAsync(ct))?.ActiveStage == stage, ct);
+    }
+
+    /// <summary>Sets the DPI value of the active stage.</summary>
+    public async Task SetDpiValueAsync(int dpi, CancellationToken ct)
+    {
+        EnsureDpiModel();
+        PulsarDpi.TryDecode(PulsarDpi.Encode(dpi), out int stored);
+        GearDpiState state = await ReadDpiOrThrowAsync(ct);
+        int active = state.ActiveStage;
+        await WriteDpiAsync(
+            PulsarDpi.StageWrite(active, dpi),
+            async () =>
+            {
+                GearDpiState? after = await ReadDpiAsync(ct);
+                return after is { } s && s.ActiveStage == active && s.Stages[active] == stored;
+            },
+            ct);
+    }
+
+    private void EnsureDpiModel()
+    {
+        if (!Capabilities.HasFlag(GearCapabilities.Dpi))
+        {
+            throw new NotSupportedException("DPI is only supported for the X2 CrazyLight.");
+        }
+    }
+
+    private async Task<GearDpiState> ReadDpiOrThrowAsync(CancellationToken ct)
+    {
+        return await ReadDpiAsync(ct) ?? throw new TimeoutException("The mouse did not report its DPI stages.");
+    }
+
+    private async Task WriteDpiAsync(byte[] frame, Func<Task<bool>> readBack, CancellationToken ct)
+    {
+        // The acknowledgement format of MemSet is unverified: fall back to reading the value back.
+        if (await ExchangeAsync(frame, PulsarProtocol.MemSet, 1, ct) is null && !await readBack())
+        {
+            throw new TimeoutException("The mouse did not acknowledge the DPI change.");
+        }
+    }
+
+    /// <summary>Data bytes of a MemGet reply, or null if the mouse did not answer.</summary>
+    private async Task<byte[]?> ReadMemoryAsync(ushort address, byte length, CancellationToken ct)
+    {
+        byte[]? reply = await ExchangeAsync(PulsarProtocol.MemGetRequest(address, length), PulsarProtocol.MemGet, Attempts, ct);
+        return reply?.AsSpan(6, length).ToArray();
+    }
 
     public void Dispose()
     {

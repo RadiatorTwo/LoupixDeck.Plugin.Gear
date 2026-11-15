@@ -11,6 +11,9 @@ internal static class PulsarModels
     public const ushort VendorUsagePage = 0xFF02;
     public const int VendorReportLength = 17;
 
+    /// <summary>Model id of the X2 CrazyLight in the Info reply.</summary>
+    public const ushort X2CrazyLightModelId = 0x5717;
+
     private static readonly Dictionary<(ushort Vid, ushort Pid), (string Name, bool Tested)> Receivers = new()
     {
         [(0x3710, 0x5406)] = ("Pulsar X2 CrazyLight", true),

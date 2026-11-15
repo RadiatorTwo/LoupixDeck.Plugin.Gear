@@ -40,3 +40,32 @@ public sealed class PulsarHardwareSmokeTests(ITestOutputHelper output)
         Assert.True(info);
     }
 }
+
+/// <summary>Read-only DPI check (Status and MemGet only); never sends a write command.</summary>
+public sealed class PulsarDpiHardwareSmokeTests(ITestOutputHelper output)
+{
+    [SkippableFact]
+    [Trait("Category", "Hardware")]
+    public async Task Reads_dpi_stages()
+    {
+        Skip.IfNot(Environment.GetEnvironmentVariable("GEAR_HW") == "1");
+        Skip.IfNot(OperatingSystem.IsWindows() || OperatingSystem.IsLinux());
+
+        IHidTransport transport = HidTransports.Create();
+        IGearDevice? found = new PulsarProvider().Match(transport.Enumerate(), transport).FirstOrDefault(d => d.Tested);
+        Skip.If(found is null, "No tested Pulsar device plugged in.");
+
+        using PulsarDevice device = Assert.IsType<PulsarDevice>(found);
+        CancellationToken ct = CancellationToken.None;
+
+        bool awake = await device.IsAwakeAsync(ct);
+        output.WriteLine($"awake={awake}");
+        Skip.IfNot(awake, "The mouse is asleep.");
+        Skip.IfNot(await device.RefreshIdentityAsync(ct), "The mouse did not report its identity.");
+        output.WriteLine($"name={device.Name} capabilities={device.Capabilities}");
+
+        GearDpiState? state = await device.ReadDpiAsync(ct);
+        Skip.If(state is null, "The mouse did not answer the DPI read.");
+        output.WriteLine($"stages=[{string.Join(", ", state!.Value.Stages)}] activeStage(0-based)={state.Value.ActiveStage}");
+    }
+}
