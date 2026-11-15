@@ -377,6 +377,76 @@ public sealed class LogitechDeviceTests
         Assert.Equal(1, hardware.Calls.Single(c => c.Function == 2 && c.Feature == 0x8060).Parameters[0]);
     }
 
+    // A G-series mouse with OnboardProfiles: in onboard mode (1) it refuses rate writes with InvalidArgument, as the G502 does.
+    private static FakeHidppDevice OnboardMouse(byte mode, List<byte> modeWrites)
+    {
+        byte current = 1;
+        FakeHidppDevice device = FakeHidppDevice.Mouse();
+        device.On(0x8100, 2, _ => FakeHidppDevice.Pad(mode));
+        device.On(0x8100, 1, p =>
+        {
+            modeWrites.Add(p[0]);
+            mode = p[0];
+            return FakeHidppDevice.Pad();
+        });
+        device.On(0x8060, 0, _ => FakeHidppDevice.Pad(0b1000_1011));
+        device.On(0x8060, 1, _ => FakeHidppDevice.Pad(current));
+        return device.On(0x8060, 2, p =>
+        {
+            if (mode != 2)
+            {
+                throw new FakeHidppError(0x02);
+            }
+
+            current = p[0];
+            return FakeHidppDevice.Pad();
+        });
+    }
+
+    [Fact]
+    public async Task SetRate_InOnboardMode_SwitchesToHostModeFirst()
+    {
+        List<byte> modeWrites = [];
+        FakeHidppBus bus = new(receiver: false);
+        bus.Plug(Wired, OnboardMouse(mode: 1, modeWrites));
+        using LogitechDevice mouse = bus.Device(Wired);
+        await mouse.RefreshIdentityAsync(Ct);
+
+        await mouse.SetPollingRateAsync(500, Ct);
+
+        Assert.Equal([2], modeWrites);
+        Assert.Equal(500, await mouse.ReadPollingRateAsync(Ct));
+    }
+
+    [Fact]
+    public async Task SetRate_InHostMode_DoesNotSwitch()
+    {
+        List<byte> modeWrites = [];
+        FakeHidppBus bus = new(receiver: false);
+        bus.Plug(Wired, OnboardMouse(mode: 2, modeWrites));
+        using LogitechDevice mouse = bus.Device(Wired);
+        await mouse.RefreshIdentityAsync(Ct);
+
+        await mouse.SetPollingRateAsync(250, Ct);
+
+        Assert.Empty(modeWrites);
+    }
+
+    [Fact]
+    public async Task Reads_NeverSwitchTheMode()
+    {
+        List<byte> modeWrites = [];
+        FakeHidppBus bus = new(receiver: false);
+        bus.Plug(Wired, OnboardMouse(mode: 1, modeWrites));
+        using LogitechDevice mouse = bus.Device(Wired);
+        await mouse.RefreshIdentityAsync(Ct);
+        await mouse.IsAwakeAsync(Ct);
+        await mouse.ReadPollingRateAsync(Ct);
+        await mouse.ReadDpiAsync(Ct);
+
+        Assert.Empty(modeWrites);
+    }
+
     [Fact]
     public async Task ExtendedRate_PreferredOverLegacy()
     {

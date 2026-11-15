@@ -36,8 +36,13 @@ is not covered. The plugin reads these HID++ features and offers what the mouse 
 
 Everything about Logitech is **untested** except what the read-only hardware smoke test covers
 (a G502 Proteus Spectrum on a cable: name, polling rate and DPI read). Writing the polling rate
-and the DPI, the battery and the receiver routes have not been tried. The plugin never switches
-the onboard profile mode.
+and the DPI, the battery and the receiver routes have not been tried.
+
+G-series mice with onboard profiles (`0x8100`) refuse polling-rate and DPI writes while they run
+their onboard profile. When you press a polling-rate or DPI button on such a mouse, the plugin
+first switches it to host mode, as G HUB does while it runs. It never switches back. In host mode
+the buttons and DPI stages stored in the onboard profile may not apply until the mouse is
+replugged or G HUB takes over again. Reading never changes the mode.
 
 - The key of a mouse is `logitech:model:<model id>:<unit id>`; it is the same over receiver and
   cable, so a button keeps working when you change the connection.

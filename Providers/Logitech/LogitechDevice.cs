@@ -12,6 +12,12 @@ internal sealed class LogitechDevice : IGearDevice
 {
     private const string VendorPrefix = "Logitech";
 
+    // OnboardProfiles (0x8100): function 1 setMode, function 2 getMode; mode 1 onboard, 2 host.
+    private const byte OnboardSetMode = 1;
+    private const byte OnboardGetMode = 2;
+    private const byte OnboardModeOnboard = 1;
+    private const byte OnboardModeHost = 2;
+
     // What the identity read found out about the mouse; replaced as a whole.
     private sealed record Profile(
         LogitechIdentity Identity,
@@ -158,6 +164,7 @@ internal sealed class LogitechDevice : IGearDevice
                     throw new ArgumentOutOfRangeException(nameof(hz), hz, "Polling rate not supported on this link.");
                 }
 
+                await EnsureHostModeAsync(token);
                 if (feature == LogitechFeatures.ExtendedReportRate)
                 {
                     LogitechDecoding.TryExtendedCodeForHz(hz, out byte code);
@@ -489,8 +496,28 @@ internal sealed class LogitechDevice : IGearDevice
         return LogitechDecoding.BuildDpiState(list, current);
     }
 
+    /// <summary>
+    /// G-series mice running their onboard profile (0x8100 mode 1) refuse rate and DPI writes with InvalidArgument;
+    /// only host mode (2) takes them. G HUB and OpenLogi switch the same way. Called only right before a write the
+    /// user asked for; the mouse stays in host mode (no switch back), which typically lasts until it is replugged.
+    /// </summary>
+    private async Task EnsureHostModeAsync(CancellationToken ct)
+    {
+        if (await FeatureIndexAsync(LogitechFeatures.OnboardProfiles, ct) is null)
+        {
+            return;
+        }
+
+        byte[] mode = await CallAsync(LogitechFeatures.OnboardProfiles, OnboardGetMode, [], ct);
+        if (mode[0] == OnboardModeOnboard)
+        {
+            await SetAsync(LogitechFeatures.OnboardProfiles, OnboardSetMode, [OnboardModeHost], ct);
+        }
+    }
+
     private async Task SetDpiCoreAsync(int dpi, CancellationToken ct)
     {
+        await EnsureHostModeAsync(ct);
         await SetAsync(LogitechFeatures.AdjustableDpi, 3, [0, (byte)(dpi >> 8), (byte)dpi], ct);
         if (LogitechDecoding.ParseDpi(await CallAsync(LogitechFeatures.AdjustableDpi, 2, [0], ct)) != dpi)
         {

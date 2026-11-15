@@ -12,4 +12,5 @@ internal static class LogitechFeatures
     public const ushort AdjustableDpi = 0x2201;
     public const ushort ReportRate = 0x8060;
     public const ushort ExtendedReportRate = 0x8061;
+    public const ushort OnboardProfiles = 0x8100;
 }
