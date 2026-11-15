@@ -1,5 +1,4 @@
 using LoupixDeck.Plugin.Gear.Hid;
-using LoupixDeck.Plugin.Gear.Providers.Pulsar;
 using LoupixDeck.PluginSdk;
 
 namespace LoupixDeck.Plugin.Gear.Devices;
@@ -130,7 +129,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             }
 
             int count = dpi.Value.Stages.Count;
-            int stage = direction > 0 ? PulsarDpi.NextStage(dpi.Value.ActiveStage, count) : PulsarDpi.PreviousStage(dpi.Value.ActiveStage, count);
+            int stage = direction > 0 ? DpiStages.NextStage(dpi.Value.ActiveStage, count) : DpiStages.PreviousStage(dpi.Value.ActiveStage, count);
             await Run(() => device.SetDpiStageAsync(stage, ct), ct);
             return true;
         });

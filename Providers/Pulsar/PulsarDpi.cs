@@ -114,12 +114,6 @@ internal static class PulsarDpi
         return false;
     }
 
-    /// <summary>The stage after <paramref name="active"/>, wrapping from the last to the first.</summary>
-    public static int NextStage(int active, int count) => (active + 1) % count;
-
-    /// <summary>The stage before <paramref name="active"/>, wrapping from the first to the last.</summary>
-    public static int PreviousStage(int active, int count) => (active + count - 1) % count;
-
     private static (int Mode, int Multiple, int Base) Pick(int dpi)
     {
         foreach ((int mode, int multiple, int baseValue, int? limit) in Modes)
