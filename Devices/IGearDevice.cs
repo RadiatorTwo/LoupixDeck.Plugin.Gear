@@ -9,6 +9,12 @@ internal interface IGearDevice : IDisposable
 {
     string ContainerKey { get; }
 
+    /// <summary>
+    /// False while the device must not be listed: an empty receiver slot or a paired device that is not a mouse.
+    /// The registry still polls it on the normal schedule, so it appears once it becomes present.
+    /// </summary>
+    bool IsPresent => true;
+
     /// <summary>Stable identity of the mouse; null until <see cref="RefreshIdentityAsync"/> (or an earlier cached read) knew it.</summary>
     string? Key { get; }
 

@@ -11,7 +11,8 @@ namespace LoupixDeck.Plugin.Gear.Devices;
 /// immediately. An awake mouse is read again every <see cref="AwakeInterval"/>; a sleeping or failing one only has
 /// its status checked every <see cref="AsleepInterval"/> (no battery query while it sleeps) and is read in full
 /// right after it wakes. Devices are tracked by HID path: a path that is still present keeps its device instance,
-/// a path that vanished has its instance disposed. All device I/O runs on the thread pool.
+/// a path that vanished has its instances disposed (one path may carry several devices, e.g. receiver slots). A device that reports
+/// <see cref="IGearDevice.IsPresent"/> = false stays tracked and polled but is left out of the snapshot. All device I/O runs on the thread pool.
 /// </remarks>
 internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<IGearProvider> providers, IPluginLogger logger, TimeProvider time) : IGearDeviceControl, IDisposable
 {
@@ -268,8 +269,8 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
                 continue;
             }
 
-            IGearDevice? device = MatchOne(info);
-            if (device == null)
+            IReadOnlyList<IGearDevice> devices = Match(info);
+            if (devices.Count == 0)
             {
                 continue;
             }
@@ -278,19 +279,27 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             {
                 if (_disposed)
                 {
-                    device.Dispose();
+                    foreach (IGearDevice device in devices)
+                    {
+                        device.Dispose();
+                    }
+
                     return gone.Count > 0;
                 }
 
-                _entries.Add(new Entry(info.Path, device));
+                foreach (IGearDevice device in devices)
+                {
+                    _entries.Add(new Entry(info.Path, device));
+                }
             }
         }
 
         return gone.Count > 0;
     }
 
-    // Providers see one collection at a time so the resulting device can be tied to its path.
-    private IGearDevice? MatchOne(HidDeviceInfo info)
+    // Providers see one collection at a time so the resulting devices can be tied to its path. The first provider
+    // that matches wins; one collection may yield several devices (e.g. the slots of a receiver).
+    private IReadOnlyList<IGearDevice> Match(HidDeviceInfo info)
     {
         foreach (IGearProvider provider in providers)
         {
@@ -302,12 +311,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
                     continue;
                 }
 
-                for (int i = 1; i < matched.Count; i++)
-                {
-                    matched[i].Dispose();
-                }
-
-                return matched[0];
+                return matched;
             }
             catch (Exception ex)
             {
@@ -315,7 +319,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             }
         }
 
-        return null;
+        return [];
     }
 
     private async Task<bool> PollIfDueAsync(Entry entry, CancellationToken ct)
@@ -560,11 +564,18 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             }
 
             // The allowed rates compare by reference in the record; a provider that rebuilds an equal list must not count as a change.
-            bool changed = !SameState(entry.State, state);
-            if (changed)
+            bool stateChanged = !SameState(entry.State, state);
+            if (stateChanged)
             {
                 entry.State = state;
             }
+
+            // A hidden device's state is not observable; but a device that appears or disappears (IsPresent flips)
+            // changes the visible list even if its state did not.
+            bool visible = entry.Device.IsPresent;
+            bool changed = (stateChanged && visible) || visible != entry.Visible;
+            entry.Visible = visible;
+
             _snapshot = BuildSnapshot();
             return changed;
         }
@@ -575,14 +586,14 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
         && (previous.AllowedPollingRates ?? []).SequenceEqual(current.AllowedPollingRates ?? [])
         && previous == current with { AllowedPollingRates = previous.AllowedPollingRates };
 
-    // Caller holds _lock.
-    private GearDeviceState[] BuildSnapshot() => _entries.Where(e => e.State != null).Select(e => e.State!).ToArray();
+    // Caller holds _lock. Entries whose device is not present (empty slot, non-mouse) stay tracked but are not listed.
+    private GearDeviceState[] BuildSnapshot() => _entries.Where(e => e.State != null && e.Device.IsPresent).Select(e => e.State!).ToArray();
 
     private Entry? FindEntry(string? key)
     {
         lock (_lock)
         {
-            return _entries.FirstOrDefault(e => e.State != null && (string.IsNullOrEmpty(key) || e.Device.Key == key));
+            return _entries.FirstOrDefault(e => e.State != null && e.Device.IsPresent && (string.IsNullOrEmpty(key) || e.Device.Key == key));
         }
     }
 
@@ -641,5 +652,8 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
         public DateTimeOffset NextPoll = DateTimeOffset.MinValue;
 
         public bool IdentityTried;
+
+        // Whether the entry was listed in the snapshot at the last Update; only touched under the registry lock.
+        public bool Visible;
     }
 }

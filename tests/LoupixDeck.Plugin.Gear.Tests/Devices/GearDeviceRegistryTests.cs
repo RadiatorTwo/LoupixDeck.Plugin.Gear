@@ -369,6 +369,100 @@ public sealed class GearDeviceRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task Registry_SeveralDevicesOnOneCollection_AllAppear()
+    {
+        FakeDevice a = new() { Key = "slot1" };
+        FakeDevice b = new() { Key = "slot2" };
+        _transport.Paths.Add("recv");
+        _provider.MultiDevices["recv"] = [a, b];
+
+        await _registry.TickAsync();
+
+        Assert.Equal(["slot1", "slot2"], _registry.Devices.Select(d => d.Key));
+        Assert.Equal(1, a.IdentityCalls);
+        Assert.Equal(1, b.IdentityCalls);
+        Assert.Equal(1, _provider.MatchCalls);
+    }
+
+    [Fact]
+    public async Task Registry_NotPresentDevice_IsHiddenAndNotFound()
+    {
+        FakeDevice hidden = new() { Key = "empty", Present = false };
+        FakeDevice shown = new() { Key = "mouse" };
+        _transport.Paths.Add("recv");
+        _provider.MultiDevices["recv"] = [hidden, shown];
+
+        await _registry.TickAsync();
+
+        Assert.Equal("mouse", Assert.Single(_registry.Devices).Key);
+        Assert.Null(_registry.Find("empty"));
+        Assert.False(await _registry.SetDpiAsync("empty", 800));
+        Assert.Equal(0, hidden.WriteCalls);
+        Assert.True(await _registry.SetDpiAsync(null, 1600));
+        Assert.Equal(1, shown.WriteCalls);
+    }
+
+    [Fact]
+    public async Task Registry_NotPresentDevice_IsStillPolledAndAppearsWhenPresent()
+    {
+        FakeDevice device = new() { Key = "slot", Present = false };
+        _transport.Paths.Add("recv");
+        _provider.MultiDevices["recv"] = [device];
+        await _registry.TickAsync();
+        int changes = 0;
+        _registry.Changed += () => changes++;
+        int before = device.AwakeCalls;
+
+        _time.Advance(GearDeviceRegistry.AwakeInterval);
+        await _registry.TickAsync();
+        Assert.True(device.AwakeCalls > before);
+        Assert.Empty(_registry.Devices);
+        Assert.Equal(0, changes);
+
+        device.Present = true;
+        _time.Advance(GearDeviceRegistry.AwakeInterval);
+        await _registry.TickAsync();
+
+        Assert.Equal("slot", Assert.Single(_registry.Devices).Key);
+        Assert.Equal("slot", _registry.Find("slot")?.Key);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public async Task Registry_DeviceBecomesNotPresent_DisappearsAndRaisesChanged()
+    {
+        FakeDevice device = await PlugInAsync();
+        Assert.Single(_registry.Devices);
+        int changes = 0;
+        _registry.Changed += () => changes++;
+
+        device.Present = false;
+        _time.Advance(GearDeviceRegistry.AwakeInterval);
+        await _registry.TickAsync();
+
+        Assert.Empty(_registry.Devices);
+        Assert.Null(_registry.Find("key-p1"));
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public async Task Registry_VanishedPath_DisposesAllItsDevices()
+    {
+        FakeDevice a = new() { Key = "slot1" };
+        FakeDevice b = new() { Key = "slot2", Present = false };
+        _transport.Paths.Add("recv");
+        _provider.MultiDevices["recv"] = [a, b];
+        await _registry.TickAsync();
+
+        _transport.Paths.Clear();
+        await _registry.TickAsync();
+
+        Assert.Empty(_registry.Devices);
+        Assert.True(a.Disposed);
+        Assert.True(b.Disposed);
+    }
+
+    [Fact]
     public async Task Dispose_DisposesDevicesAndRejectsCommands()
     {
         FakeDevice device = await PlugInAsync();
@@ -425,12 +519,18 @@ public sealed class GearDeviceRegistryTests : IDisposable
     {
         public Dictionary<string, FakeDevice> Devices { get; } = [];
 
+        /// <summary>Several devices for one collection (receiver slots); takes precedence over <see cref="Devices"/>.</summary>
+        public Dictionary<string, FakeDevice[]> MultiDevices { get; } = [];
+
         public int MatchCalls;
 
         public IReadOnlyList<IGearDevice> Match(IReadOnlyList<HidDeviceInfo> devices, IHidTransport transport)
         {
             MatchCalls++;
-            return devices.Where(d => Devices.ContainsKey(d.Path)).Select(d => (IGearDevice)Devices[d.Path]).ToList();
+            return devices
+                .SelectMany(d => MultiDevices.TryGetValue(d.Path, out FakeDevice[]? many) ? many : Devices.TryGetValue(d.Path, out FakeDevice? one) ? [one] : [])
+                .Select(d => (IGearDevice)d)
+                .ToList();
         }
     }
 
@@ -465,6 +565,10 @@ public sealed class GearDeviceRegistryTests : IDisposable
         public int[] Stages = [400, 800, 1600];
 
         public string ContainerKey => "c";
+
+        public bool Present { get; set; } = true;
+
+        public bool IsPresent => Present;
 
         public string? Key { get; set; }
 
