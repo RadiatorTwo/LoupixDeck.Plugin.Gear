@@ -124,6 +124,48 @@ public sealed class DevicePageTests
         }
     }
 
+    private static GearDeviceState Wired(int? percent = null, GearDpiState? dpi = null) =>
+        Device(percent: percent, rate: 1000, dpi: dpi ?? new GearDpiState([800, 1200, 1600], 1), link: GearLink.Wired)
+            with { Capabilities = GearCapabilities.PollingRate | GearCapabilities.Dpi };
+
+    private static bool HeroHas(PixelSurface surface, uint color)
+    {
+        for (int y = 21; y < 42; y++)
+        {
+            for (int x = 0; x < surface.Width; x++)
+            {
+                if (Pixel(surface, x, y) == color)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    [Fact]
+    public void DevicePage_WithoutBattery_ShowsTheDpiAsHero()
+    {
+        PixelSurface wired = Render(Wired());
+        PixelSurface unknownDpi = Render(Wired() with { Dpi = null });
+
+        Assert.True(HeroHas(wired, P.Text));
+        Assert.False(HeroHas(unknownDpi, P.Text));
+        Assert.NotEqual(Render(Wired(dpi: new GearDpiState([800, 1200, 1600], 2))).ContentHash(), wired.ContentHash());
+    }
+
+    [Fact]
+    public void Overview_WithoutBattery_ShowsTheDpi()
+    {
+        PixelSurface withDpi = new(90, 90, P);
+        OverviewPage.Draw(withDpi, [Wired()], null, true, text => text);
+        PixelSurface withoutDpi = new(90, 90, P);
+        OverviewPage.Draw(withoutDpi, [Wired() with { Dpi = null }], null, true, text => text);
+
+        Assert.NotEqual(withoutDpi.ContentHash(), withDpi.ContentHash());
+    }
+
     [Fact]
     public void Overview_NoDevices_DoesNotThrow()
     {

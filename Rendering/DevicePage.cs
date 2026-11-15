@@ -6,7 +6,8 @@ namespace LoupixDeck.Plugin.Gear.Rendering;
 
 /// <summary>
 /// One mouse on a tile: header (name, n/N), battery hero with unit and charging bolt, battery bar and the
-/// HZ / DPI / LINK rows. Coordinates follow the shared page anatomy: header 8-16, hero 21, bar 45, rows at 52/62/72.
+/// HZ / DPI / LINK rows. A mouse without a battery shows its DPI as the hero instead, with no bar and only the
+/// HZ / LINK rows. Coordinates follow the shared page anatomy: header 8-16, hero 21, bar 45, rows at 52/62/72.
 /// </summary>
 internal static class DevicePage
 {
@@ -51,6 +52,26 @@ internal static class DevicePage
         TileDrawing.Header(surface, device.DisplayName, pageIndex, state, blinkOn);
 
         bool asleep = device.Availability == GearAvailability.Asleep;
+        string? dpi = ActiveDpi(device);
+        if (!device.Capabilities.HasFlag(GearCapabilities.Battery))
+        {
+            // A wired mouse has no battery: the DPI takes the hero spot and its row is dropped.
+            if (dpi != null)
+            {
+                string unit = tr("DPI");
+                (int sideX, _) = TileDrawing.HeroValue(surface, dpi, HeroY, asleep ? p.Dim : p.Text, 3, PixelFont.Measure(unit));
+                surface.Text(unit, sideX, HeroY, p.Dim);
+            }
+            else
+            {
+                surface.Text("--", TileDrawing.L, HeroY, p.Dim, 3);
+            }
+
+            DrawRow(surface, tr("HZ"), device.PollingRate?.ToString(), FirstRowY, p);
+            DrawRow(surface, tr("LINK"), LinkText(device, tr), FirstRowY + RowPitch, p);
+            return;
+        }
+
         if (device.Percent is { } percent)
         {
             uint color = asleep ? p.Dim : TileDrawing.StateColor(p, state);
@@ -69,10 +90,13 @@ internal static class DevicePage
         }
 
         DrawRow(surface, tr("HZ"), device.PollingRate?.ToString(), FirstRowY, p);
-        string? dpi = device.Dpi is { } d && d.ActiveStage >= 0 && d.ActiveStage < d.Stages.Count ? d.Stages[d.ActiveStage].ToString() : null;
         DrawRow(surface, tr("DPI"), dpi, FirstRowY + RowPitch, p);
         DrawRow(surface, tr("LINK"), LinkText(device, tr), FirstRowY + (2 * RowPitch), p);
     }
+
+    /// <summary>The DPI of the active stage as text; null when unknown.</summary>
+    public static string? ActiveDpi(GearDeviceState device) =>
+        device.Dpi is { } d && d.ActiveStage >= 0 && d.ActiveStage < d.Stages.Count ? d.Stages[d.ActiveStage].ToString() : null;
 
     private static string? LinkText(GearDeviceState device, Func<string, string> tr) => device.Availability switch
     {

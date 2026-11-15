@@ -25,8 +25,11 @@ internal static class OverviewPage
             GearDeviceState device = devices[i];
             int y = FirstRowY + (RowPitch * i);
             bool asleep = device.Availability == GearAvailability.Asleep;
-            string percent = device.Percent is { } value ? $"{value}%" : "--";
-            uint color = device.Percent is null || asleep ? p.Dim : TileDrawing.StateColor(p, DevicePage.StateOf(device));
+            // A mouse without battery shows its DPI instead of a percentage.
+            bool hasBattery = device.Capabilities.HasFlag(GearCapabilities.Battery);
+            string? shown = hasBattery ? (device.Percent is { } value ? $"{value}%" : null) : DevicePage.ActiveDpi(device);
+            string percent = shown ?? "--";
+            uint color = shown is null || asleep ? p.Dim : hasBattery ? TileDrawing.StateColor(p, DevicePage.StateOf(device)) : p.Text;
 
             surface.Text(TileDrawing.Fit(device.DisplayName, TileDrawing.W - PixelFont.Measure(percent) - 3), TileDrawing.L, y, asleep ? p.Dim : p.Text);
             surface.TextRight(percent, TileDrawing.R, y, color);
