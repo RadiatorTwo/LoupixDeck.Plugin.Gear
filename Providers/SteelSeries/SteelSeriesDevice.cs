@@ -11,9 +11,12 @@ namespace LoupixDeck.Plugin.Gear.Providers.SteelSeries;
 /// These mice cannot report their polling rate or DPI. After Gear has set one, the device reports the value it wrote;
 /// before that, and after a replug (a new device instance), the value is unknown. A change made elsewhere (vendor
 /// app, DPI button) is not seen. Writes are not saved to the mouse's memory, so a replug restores its own settings.
+/// For Next/Previous and the menu the DPI stages are a fixed ladder, as for Logitech.
 /// </remarks>
 internal sealed class SteelSeriesDevice : IGearDevice
 {
+    private static readonly int[] DpiLadder = [400, 800, 1600, 3200, 6400, 12800, 25600];
+
     private const int Attempts = 2;
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromMilliseconds(500);
 
@@ -46,7 +49,11 @@ internal sealed class SteelSeriesDevice : IGearDevice
         _model = model;
         _payloadOffset = (readIncludesReportId ?? OperatingSystem.IsWindows()) ? 1 : 0;
         AllowedPollingRates = model.Profile.PollingCodes.Keys.Order().ToArray();
+        _ladder = DpiLadder.Select(rung => model.Profile.Dpi.Build(rung).Dpi).Distinct().Order().ToArray();
     }
+
+    // The ladder rungs snapped to what the sensor supports.
+    private readonly int[] _ladder;
 
     public string ContainerKey => _info.ContainerKey;
 
@@ -117,19 +124,27 @@ internal sealed class SteelSeriesDevice : IGearDevice
         _pollingRate = hz;
     }
 
-    /// <summary>The DPI Gear last set, as the single active stage; null before the first write.</summary>
-    public Task<GearDpiState?> ReadDpiAsync(CancellationToken ct) =>
-        Task.FromResult(_dpi == 0 ? null : (GearDpiState?)new GearDpiState([_dpi], 0));
+    /// <summary>
+    /// The ladder plus the DPI Gear last set at its place; the active stage is that value, or -1 before the first write.
+    /// </summary>
+    public Task<GearDpiState?> ReadDpiAsync(CancellationToken ct) => Task.FromResult<GearDpiState?>(BuildDpiState());
 
-    /// <summary>Only the one stage Gear knows exists: selecting it writes its DPI again.</summary>
     public async Task SetDpiStageAsync(int stage, CancellationToken ct)
     {
-        if (stage != 0 || _dpi == 0)
+        GearDpiState state = BuildDpiState();
+        if (stage < 0 || stage >= state.Stages.Count)
         {
             throw new ArgumentOutOfRangeException(nameof(stage), stage, "No such DPI stage.");
         }
 
-        await SetDpiValueAsync(_dpi, ct);
+        await SetDpiValueAsync(state.Stages[stage], ct);
+    }
+
+    private GearDpiState BuildDpiState()
+    {
+        int current = _dpi;
+        List<int> stages = current == 0 ? [.. _ladder] : [.. _ladder.Append(current).Distinct().Order()];
+        return new GearDpiState(stages, current == 0 ? -1 : stages.IndexOf(current));
     }
 
     /// <summary>Makes the mouse run at <paramref name="dpi"/>, snapped to the nearest value its sensor supports.</summary>

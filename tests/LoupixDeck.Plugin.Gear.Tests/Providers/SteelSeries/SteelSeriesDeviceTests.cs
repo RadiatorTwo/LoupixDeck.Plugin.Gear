@@ -101,26 +101,59 @@ public sealed class SteelSeriesDeviceTests
     }
 
     [Fact]
-    public async Task Dpi_ReportsTheWrittenValueAsSingleStage()
+    public async Task Dpi_BeforeAnyWrite_IsTheLadderWithoutActiveStage()
+    {
+        using SteelSeriesDevice device = Create(new FakeSteelSeriesConnection());
+
+        GearDpiState? dpi = await device.ReadDpiAsync(CancellationToken.None);
+
+        // Rival 650: 100..12000 DPI, so 12800 and 25600 snap to 12000.
+        Assert.Equal([400, 800, 1600, 3200, 6400, 12000], dpi?.Stages);
+        Assert.Equal(-1, dpi?.ActiveStage);
+    }
+
+    [Fact]
+    public async Task Dpi_WrittenValueIsInsertedAndActive()
     {
         FakeSteelSeriesConnection connection = new();
         using SteelSeriesDevice device = Create(connection);
 
-        Assert.Null(await device.ReadDpiAsync(CancellationToken.None));
-        await device.SetDpiValueAsync(1640, CancellationToken.None);
+        await device.SetDpiValueAsync(1240, CancellationToken.None);
 
-        Assert.Equal([[0x00, 0x15, 0x01, 0x0F], [0x00, 0x15, 0x02, 0x0F]], connection.Written);
+        Assert.Equal([[0x00, 0x15, 0x01, 0x0B], [0x00, 0x15, 0x02, 0x0B]], connection.Written);
         GearDpiState? dpi = await device.ReadDpiAsync(CancellationToken.None);
-        Assert.Equal([1600], dpi?.Stages);
-        Assert.Equal(0, dpi?.ActiveStage);
+        Assert.Equal([400, 800, 1200, 1600, 3200, 6400, 12000], dpi?.Stages);
+        Assert.Equal(2, dpi?.ActiveStage);
     }
 
     [Fact]
-    public async Task DpiStage_UnknownStageIsRejected()
+    public async Task DpiStage_WritesTheLadderValue()
     {
-        using SteelSeriesDevice device = Create(new FakeSteelSeriesConnection());
+        FakeSteelSeriesConnection connection = new();
+        using SteelSeriesDevice device = Create(connection);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => device.SetDpiStageAsync(0, CancellationToken.None));
+        await device.SetDpiStageAsync(2, CancellationToken.None);
+
+        Assert.Equal([0x00, 0x15, 0x01, 0x0F], connection.Written[0]);
+        Assert.Equal(2, (await device.ReadDpiAsync(CancellationToken.None))?.ActiveStage);
+    }
+
+    [Fact]
+    public async Task DpiStage_OutOfRangeIsRejectedWithoutWriting()
+    {
+        FakeSteelSeriesConnection connection = new();
+        using SteelSeriesDevice device = Create(connection);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => device.SetDpiStageAsync(6, CancellationToken.None));
+        Assert.Empty(connection.Written);
+    }
+
+    [Fact]
+    public async Task Dpi_LadderIsLimitedToTheSensorChoices()
+    {
+        using SteelSeriesDevice device = Create(new FakeSteelSeriesConnection(), pid: 0x1366);
+
+        Assert.Equal([400, 800, 1600, 3200], (await device.ReadDpiAsync(CancellationToken.None))?.Stages);
     }
 
     [Fact]
