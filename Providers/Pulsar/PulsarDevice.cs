@@ -14,6 +14,11 @@ internal sealed class PulsarDevice : IGearDevice
     private const int Attempts = 2;
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromSeconds(2.5);
 
+    // Just long enough for an already queued report to be delivered on both platforms (a zero timeout would
+    // cancel the Windows overlapped read before it is issued).
+    private static readonly TimeSpan DrainTimeout = TimeSpan.FromMilliseconds(1);
+    private const int MaxDrainedReports = 256;
+
     private readonly HidDeviceInfo _info;
     private readonly IHidTransport _transport;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -344,14 +349,19 @@ internal sealed class PulsarDevice : IGearDevice
     /// <summary>
     /// Sends the request and reads until a valid reply to <paramref name="cmd"/> arrives or the deadline passes.
     /// Everything else is skipped: reports of other collections (all collections of the interface arrive on
-    /// Linux), stale late replies and corrupt reports.
+    /// Linux), stale late replies and corrupt reports. Whatever is already queued is discarded first, so a late
+    /// reply of an earlier timed-out request cannot pass for the answer to this one.
     /// </summary>
     private static byte[]? SendAndAwait(IHidConnection connection, byte[] request, byte cmd, CancellationToken ct)
     {
+        byte[] buffer = new byte[64];
+        for (int drained = 0; drained < MaxDrainedReports && connection.Read(buffer, DrainTimeout) > 0; drained++)
+        {
+        }
+
         connection.SendOutputReport(request);
 
         DateTime deadline = DateTime.UtcNow + ReplyTimeout;
-        byte[] buffer = new byte[64];
         while (!ct.IsCancellationRequested)
         {
             TimeSpan remaining = deadline - DateTime.UtcNow;

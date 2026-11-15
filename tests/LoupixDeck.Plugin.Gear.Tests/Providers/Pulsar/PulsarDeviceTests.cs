@@ -46,6 +46,22 @@ public sealed class PulsarDeviceTests
     }
 
     [Fact]
+    public async Task StaleAndForeignReports_AreDrainedBeforeTheRequest()
+    {
+        FakeHidConnection fake = new(_ => [PowerReply(0x5F, false, 4105)]);
+        byte[] foreign = new byte[17];
+        foreign[0] = 0x05;
+        fake.Preload(foreign);
+        fake.Preload(PowerReply(0x10, false, 3300));
+        fake.Preload(foreign);
+        using PulsarDevice device = Create(fake);
+
+        GearPowerReading? reading = await device.ReadPowerAsync(CancellationToken.None);
+
+        Assert.Equal(new GearPowerReading(99, false, 4105), reading);
+    }
+
+    [Fact]
     public void Match_FindsVendorCollectionOnly()
     {
         List<HidDeviceInfo> all =
