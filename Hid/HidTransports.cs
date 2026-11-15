@@ -1,3 +1,4 @@
+using LoupixDeck.Plugin.Gear.Hid.Linux;
 using LoupixDeck.Plugin.Gear.Hid.Windows;
 
 namespace LoupixDeck.Plugin.Gear.Hid;
@@ -10,6 +11,11 @@ internal static class HidTransports
         if (OperatingSystem.IsWindows())
         {
             return new WindowsHidTransport();
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            return new LinuxHidrawTransport();
         }
 
         return new UnsupportedHidTransport();
