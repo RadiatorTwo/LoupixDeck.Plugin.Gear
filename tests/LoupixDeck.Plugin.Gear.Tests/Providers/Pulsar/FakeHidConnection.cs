@@ -9,6 +9,13 @@ internal sealed class FakeHidConnection(Func<byte[], IEnumerable<byte[]>>? respo
 
     public List<byte[]> Sent { get; } = [];
 
+    /// <summary>When set, Read signals <see cref="ReadEntered"/> and blocks until the gate is opened.</summary>
+    public ManualResetEventSlim? ReadGate { get; init; }
+
+    public ManualResetEventSlim ReadEntered { get; } = new(false);
+
+    public int DisposeCount;
+
     public void SendOutputReport(ReadOnlySpan<byte> report)
     {
         byte[] copy = report.ToArray();
@@ -24,6 +31,12 @@ internal sealed class FakeHidConnection(Func<byte[], IEnumerable<byte[]>>? respo
 
     public int Read(Span<byte> buffer, TimeSpan timeout)
     {
+        if (ReadGate is not null)
+        {
+            ReadEntered.Set();
+            ReadGate.Wait();
+        }
+
         if (!_inbound.TryDequeue(out byte[]? report))
         {
             return 0;
@@ -35,6 +48,7 @@ internal sealed class FakeHidConnection(Func<byte[], IEnumerable<byte[]>>? respo
 
     public void Dispose()
     {
+        Interlocked.Increment(ref DisposeCount);
     }
 }
 

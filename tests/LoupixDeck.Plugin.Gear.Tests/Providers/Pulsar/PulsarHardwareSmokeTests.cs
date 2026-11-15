@@ -24,7 +24,7 @@ public sealed class PulsarHardwareSmokeTests(ITestOutputHelper output)
 
         output.WriteLine($"awake={await device.IsAwakeAsync(ct)}");
 
-        bool info = await device.RefreshInfoAsync(ct);
+        bool info = await device.RefreshIdentityAsync(ct);
         output.WriteLine($"info={info} key={device.Key} name={device.Name} link={device.Link} nonceEchoed={device.InfoNonceEchoed}");
         output.WriteLine($"infoReply={Convert.ToHexString(device.LastInfoReply ?? [])}");
 

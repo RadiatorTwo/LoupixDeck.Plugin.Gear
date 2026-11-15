@@ -116,7 +116,7 @@ public sealed class PulsarDeviceTests
     public async Task AllowedRates_OneKDongle_StopsAt1000()
     {
         using PulsarDevice device = Create(new FakeHidConnection(_ => [InfoReply(0x0057, 0)]));
-        await device.RefreshInfoAsync(CancellationToken.None);
+        await device.RefreshIdentityAsync(CancellationToken.None);
 
         Assert.Equal(GearLink.Wireless1K, device.Link);
         Assert.Equal([125, 250, 500, 1000], device.AllowedPollingRates);
@@ -131,7 +131,7 @@ public sealed class PulsarDeviceTests
     public async Task AllowedRates_TopRateByLink(byte link, int top)
     {
         using PulsarDevice device = Create(new FakeHidConnection(_ => [InfoReply(0x0057, link)]));
-        await device.RefreshInfoAsync(CancellationToken.None);
+        await device.RefreshIdentityAsync(CancellationToken.None);
 
         Assert.Equal(top, device.AllowedPollingRates[^1]);
     }
@@ -142,7 +142,7 @@ public sealed class PulsarDeviceTests
         // Fake only: echoes every non-Info request as its own acknowledgement.
         FakeHidConnection fake = new(sent => sent[1] == PulsarProtocol.Info ? [InfoReply(0x0057, 1)] : [sent]);
         using PulsarDevice device = Create(fake);
-        await device.RefreshInfoAsync(CancellationToken.None);
+        await device.RefreshIdentityAsync(CancellationToken.None);
 
         await device.SetPollingRateAsync(4000, CancellationToken.None);
 
@@ -154,7 +154,7 @@ public sealed class PulsarDeviceTests
     {
         FakeHidConnection fake = new(_ => [InfoReply(0x0057, 0)]);
         using PulsarDevice device = Create(fake);
-        await device.RefreshInfoAsync(CancellationToken.None);
+        await device.RefreshIdentityAsync(CancellationToken.None);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => device.SetPollingRateAsync(4000, CancellationToken.None));
         Assert.Single(fake.Sent);
@@ -174,9 +174,9 @@ public sealed class PulsarDeviceTests
     public async Task Key_UsesModelId()
     {
         using PulsarDevice device = Create(new FakeHidConnection(_ => [InfoReply(0x060A, 5)]));
-        Assert.Equal("pulsar:3710:5406", device.Key);
+        Assert.Null(device.Key);
 
-        await device.RefreshInfoAsync(CancellationToken.None);
+        Assert.True(await device.RefreshIdentityAsync(CancellationToken.None));
 
         Assert.Equal("pulsar:model:060a", device.Key);
         Assert.Equal("Pulsar 060a", device.Name);
@@ -185,13 +185,112 @@ public sealed class PulsarDeviceTests
     }
 
     [Fact]
+    public async Task RefreshIdentity_Asleep_LeavesKeyNull()
+    {
+        using PulsarDevice device = Create(new FakeHidConnection());
+
+        Assert.False(await device.RefreshIdentityAsync(CancellationToken.None));
+        Assert.Null(device.Key);
+    }
+
+    [Fact]
+    public async Task Match_SeedsIdentityFromCachePerContainerKey()
+    {
+        PulsarProvider provider = new();
+        FakeHidConnection first = new(_ => [InfoReply(0x5717, 5)]);
+        IGearDevice a = Assert.Single(provider.Match([Vendor], new FakeHidTransport(first)));
+        Assert.Null(a.Key);
+        Assert.True(await a.RefreshIdentityAsync(CancellationToken.None));
+
+        FakeHidConnection second = new();
+        IGearDevice b = Assert.Single(provider.Match([Vendor], new FakeHidTransport(second)));
+
+        Assert.Equal("pulsar:model:5717", b.Key);
+        Assert.Equal(GearLink.Wireless8K, b.Link);
+        Assert.Empty(second.Sent);
+    }
+
+    [Fact]
+    public async Task Dispose_WhileCommandInFlight_ClosesConnectionOnceAfterwards()
+    {
+        using ManualResetEventSlim gate = new(false);
+        FakeHidConnection fake = new(_ => [PowerReply(0x5F, false, 4105)]) { ReadGate = gate };
+        PulsarDevice device = Create(fake);
+
+        Task<GearPowerReading?> inFlight = device.ReadPowerAsync(CancellationToken.None);
+        Assert.True(fake.ReadEntered.Wait(TimeSpan.FromSeconds(5)));
+
+        device.Dispose();
+        Assert.Equal(0, fake.DisposeCount);
+
+        gate.Set();
+        try
+        {
+            await inFlight;
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+        {
+        }
+
+        device.Dispose();
+        Assert.Equal(1, fake.DisposeCount);
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => device.ReadPowerAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SetPollingRate_NoAckButReadBackMatches_Succeeds()
+    {
+        FakeHidConnection fake = new(sent => sent[1] switch
+        {
+            PulsarProtocol.Info => [InfoReply(0x0057, 1)],
+            PulsarProtocol.MemGet => [PulsarProtocol.Frame(PulsarProtocol.MemGet, [0, 0, 0, 2, 0x20, 0x35])],
+            _ => [],
+        });
+        using PulsarDevice device = Create(fake);
+        await device.RefreshIdentityAsync(CancellationToken.None);
+
+        await device.SetPollingRateAsync(4000, CancellationToken.None);
+
+        Assert.Equal(PulsarProtocol.PollingRateWrite(0x20), fake.Sent.First(s => s[1] == PulsarProtocol.MemSet));
+    }
+
+    [Fact]
+    public async Task SetPollingRate_NoAckAndReadBackDiffers_Throws()
+    {
+        FakeHidConnection fake = new(sent => sent[1] switch
+        {
+            PulsarProtocol.Info => [InfoReply(0x0057, 1)],
+            PulsarProtocol.MemGet => [PulsarProtocol.Frame(PulsarProtocol.MemGet, [0, 0, 0, 2, 0x01, 0x54])],
+            _ => [],
+        });
+        using PulsarDevice device = Create(fake);
+        await device.RefreshIdentityAsync(CancellationToken.None);
+
+        await Assert.ThrowsAsync<TimeoutException>(() => device.SetPollingRateAsync(4000, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ReadPower_Cancelled_ThrowsInsteadOfReportingAsleep()
+    {
+        using CancellationTokenSource cts = new();
+        FakeHidConnection fake = new(_ =>
+        {
+            cts.Cancel();
+            return [];
+        });
+        using PulsarDevice device = Create(fake);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => device.ReadPowerAsync(cts.Token));
+    }
+
+    [Fact]
     public async Task Info_DetectsNonceEcho()
     {
         using PulsarDevice echo = Create(new FakeHidConnection(sent => [InfoReply(1, 0, sent[6..10])]));
         using PulsarDevice plain = Create(new FakeHidConnection(_ => [InfoReply(1, 0)]));
 
-        await echo.RefreshInfoAsync(CancellationToken.None);
-        await plain.RefreshInfoAsync(CancellationToken.None);
+        await echo.RefreshIdentityAsync(CancellationToken.None);
+        await plain.RefreshIdentityAsync(CancellationToken.None);
 
         Assert.True(echo.InfoNonceEchoed);
         Assert.False(plain.InfoNonceEchoed);

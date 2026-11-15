@@ -1,10 +1,16 @@
 namespace LoupixDeck.Plugin.Gear.Devices;
 
+/// <remarks>
+/// After <see cref="IDisposable.Dispose"/> every command throws <see cref="ObjectDisposedException"/>.
+/// A command already in flight is cancelled and ends with <see cref="OperationCanceledException"/> (or its
+/// result, if the reply was already in); the connection is closed once that command has let go.
+/// </remarks>
 internal interface IGearDevice : IDisposable
 {
     string ContainerKey { get; }
 
-    string Key { get; }
+    /// <summary>Stable identity of the mouse; null until <see cref="RefreshIdentityAsync"/> (or an earlier cached read) knew it.</summary>
+    string? Key { get; }
 
     string Name { get; }
 
@@ -16,6 +22,9 @@ internal interface IGearDevice : IDisposable
     bool Tested { get; }
 
     IReadOnlyList<int> AllowedPollingRates { get; }
+
+    /// <summary>Reads the identity from the device; true when <see cref="Key"/> is known afterwards.</summary>
+    Task<bool> RefreshIdentityAsync(CancellationToken ct);
 
     /// <summary>True if the mouse answers; false while it sleeps or is out of reach.</summary>
     Task<bool> IsAwakeAsync(CancellationToken ct);

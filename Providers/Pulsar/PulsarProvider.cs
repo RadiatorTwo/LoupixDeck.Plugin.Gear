@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using LoupixDeck.Plugin.Gear.Devices;
 using LoupixDeck.Plugin.Gear.Hid;
 
@@ -5,6 +6,9 @@ namespace LoupixDeck.Plugin.Gear.Providers.Pulsar;
 
 internal sealed class PulsarProvider : IGearProvider
 {
+    // Parsed Info replies per USB interface: a sleeping mouse may not answer, but its identity does not change.
+    private readonly ConcurrentDictionary<string, PulsarInfo> _identities = new();
+
     public IReadOnlyList<IGearDevice> Match(IReadOnlyList<HidDeviceInfo> devices, IHidTransport transport)
     {
         List<IGearDevice> result = [];
@@ -18,7 +22,7 @@ internal sealed class PulsarProvider : IGearProvider
                 continue;
             }
 
-            result.Add(new PulsarDevice(info, transport, name, tested));
+            result.Add(new PulsarDevice(info, transport, name, tested, _identities));
         }
 
         return result;
