@@ -69,15 +69,16 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
 
         if (device.Capabilities.HasFlag(GearCapabilities.Dpi))
         {
-            entries.Add(new MenuNode
-            {
-                Name = tr("DPI"),
-                Children =
-                [
-                    Command(tr("Next"), DpiCommand.CommandName, Request("Dpi", GearCommandParameters.Next, key)),
-                    Command(tr("Previous"), DpiCommand.CommandName, Request("Dpi", GearCommandParameters.Previous, key)),
-                ],
-            });
+            List<MenuNode> dpis =
+            [
+                Command(tr("Next"), DpiCommand.CommandName, Request("Dpi", GearCommandParameters.Next, key)),
+                Command(tr("Previous"), DpiCommand.CommandName, Request("Dpi", GearCommandParameters.Previous, key)),
+            ];
+            // Fixed values: the mouse's DPI stages as last read (Pulsar: stored stages; Logitech: the ladder).
+            dpis.AddRange((device.Dpi?.Stages ?? []).Distinct().Order().Select(dpi =>
+                Command($"{dpi} {tr("DPI")}", DpiCommand.CommandName,
+                    Request("Dpi", dpi.ToString(CultureInfo.InvariantCulture), key))));
+            entries.Add(new MenuNode { Name = tr("DPI"), Children = dpis });
         }
 
         return entries;

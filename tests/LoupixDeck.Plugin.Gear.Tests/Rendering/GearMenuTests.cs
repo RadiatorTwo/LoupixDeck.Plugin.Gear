@@ -88,4 +88,14 @@ public sealed class GearMenuTests
             .Where(l => l.CommandName == "Gear.PollingRate").Select(l => l.Parameters["Rate"]).ToList();
         Assert.Equal(["next", "125", "250", "500", "1000"], rates);
     }
+
+    [Fact]
+    public async Task DpiGroup_OffersTheStagesAsFixedValues()
+    {
+        MenuNode root = await Root(Mouse("a") with { Dpi = new GearDpiState([1600, 400, 800, 1600], 0) });
+
+        List<string> dpis = Leaves(root.Children.Single(n => n.Name == "X2"))
+            .Where(l => l.CommandName == "Gear.Dpi").Select(l => l.Parameters["Dpi"]).ToList();
+        Assert.Equal(["next", "previous", "400", "800", "1600"], dpis);
+    }
 }
