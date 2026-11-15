@@ -92,7 +92,13 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             }
 
             int? current = await Run(() => device.ReadPollingRateAsync(ct), ct);
-            int index = current is null ? -1 : allowed.ToList().IndexOf(current.Value);
+            if (current is null)
+            {
+                // Without the current rate "next" is a guess: do not write an unrequested value.
+                return false;
+            }
+
+            int index = allowed.ToList().IndexOf(current.Value);
             await Run(() => device.SetPollingRateAsync(allowed[(index + 1) % allowed.Count], ct), ct);
             return true;
         });

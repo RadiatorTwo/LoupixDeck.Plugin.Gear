@@ -227,6 +227,17 @@ public sealed class GearDeviceRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task CyclePollingRate_UnknownCurrentRate_WritesNothing()
+    {
+        FakeDevice device = await PlugInAsync(configure: d => d.RateUnknown = true);
+
+        Assert.False(await _registry.CyclePollingRateAsync(null));
+
+        Assert.Equal(0, device.WriteCalls);
+        Assert.Equal(GearAvailability.Awake, _registry.Devices[0].Availability);
+    }
+
+    [Fact]
     public async Task SetPollingRate_RejectsNotAllowedAndMissing()
     {
         FakeDevice device = await PlugInAsync();
@@ -409,6 +420,7 @@ public sealed class GearDeviceRegistryTests : IDisposable
         public Exception? Failure;
         public Exception? WriteFailure;
         public int Rate = 1000;
+        public bool RateUnknown;
         public int ActiveStage = 1;
         public int[] Stages = [400, 800, 1600];
 
@@ -448,7 +460,7 @@ public sealed class GearDeviceRegistryTests : IDisposable
             return Task.FromResult<GearPowerReading?>(new GearPowerReading(80, false, 4000));
         }
 
-        public Task<int?> ReadPollingRateAsync(CancellationToken ct) => Task.FromResult<int?>(Rate);
+        public Task<int?> ReadPollingRateAsync(CancellationToken ct) => Task.FromResult<int?>(RateUnknown ? null : Rate);
 
         public Task SetPollingRateAsync(int hz, CancellationToken ct)
         {
