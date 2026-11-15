@@ -12,6 +12,7 @@ internal enum GearAvailability
 /// <param name="Key">Stable identity of the mouse; null while it is not known yet (a sleeping mouse that never answered).</param>
 /// <param name="ShortName">Model name without the vendor prefix for the tile header; null falls back to <see cref="Name"/>.</param>
 /// <param name="Percent">Last known battery level; kept while the mouse sleeps, null if never read.</param>
+/// <param name="AllowedPollingRates">Rates (Hz) the device accepts on its current link; null or empty when unknown.</param>
 /// <param name="LastContact">Time of the last successful read, null if the mouse never answered.</param>
 internal sealed record GearDeviceState(
     string? Key,
@@ -26,7 +27,8 @@ internal sealed record GearDeviceState(
     int? PollingRate,
     GearDpiState? Dpi,
     DateTimeOffset? LastContact,
-    string? ShortName = null)
+    string? ShortName = null,
+    IReadOnlyList<int>? AllowedPollingRates = null)
 {
     /// <summary>The name for narrow displays (no vendor prefix); <see cref="Name"/> when the device has none.</summary>
     public string DisplayName => string.IsNullOrEmpty(ShortName) ? Name : ShortName;

@@ -56,7 +56,8 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
         if (device is null || device.Capabilities.HasFlag(GearCapabilities.PollingRate))
         {
             List<MenuNode> rates = [Command(tr("Next"), PollingRateCommand.CommandName, Request("Rate", GearCommandParameters.Next, key))];
-            rates.AddRange(GearCommandParameters.KnownRates.Select(hz =>
+            // Only the rates the mouse accepts on its current link; the device-independent entries offer none (next only).
+            rates.AddRange((device?.AllowedPollingRates ?? []).Select(hz =>
                 Command($"{hz} {tr("HZ")}", PollingRateCommand.CommandName, Request("Rate", hz.ToString(), key))));
             entries.Add(new MenuNode { Name = tr("Polling rate"), Children = rates });
         }

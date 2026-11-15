@@ -10,8 +10,9 @@ public sealed class GearMenuTests
         public IReadOnlyList<GearDeviceState> Devices { get; } = devices;
     }
 
-    private static GearDeviceState Mouse(string? key, string name = "X2", GearCapabilities caps = GearCapabilities.PollingRate | GearCapabilities.Dpi) =>
-        new(key, name, GearLink.Wireless8K, caps, true, GearAvailability.Awake, 80, false, null, 1000, null, null);
+    private static GearDeviceState Mouse(string? key, string name = "X2", GearCapabilities caps = GearCapabilities.PollingRate | GearCapabilities.Dpi, int[]? rates = null) =>
+        new(key, name, GearLink.Wireless8K, caps, true, GearAvailability.Awake, 80, false, null, 1000, null, null,
+            AllowedPollingRates: rates ?? [125, 250, 500, 1000, 2000, 4000, 8000]);
 
     private static async Task<MenuNode> Root(params GearDeviceState[] devices)
     {
@@ -65,5 +66,25 @@ public sealed class GearMenuTests
         MenuNode root = await Root(Mouse("a"), Mouse("b"));
 
         Assert.Equal(["X2 1", "X2 2"], root.Children.Where(n => n.Name.StartsWith("X2")).Select(n => n.Name));
+    }
+
+    [Fact]
+    public async Task DeviceOnA1KLink_OffersOnlyItsAllowedRates()
+    {
+        MenuNode root = await Root(Mouse("a", rates: [125, 250, 500, 1000]));
+
+        List<string> rates = Leaves(root.Children.Single(n => n.Name == "X2"))
+            .Where(l => l.CommandName == "Gear.PollingRate").Select(l => l.Parameters["Rate"]).ToList();
+        Assert.Equal(["next", "125", "250", "500", "1000"], rates);
+    }
+
+    [Fact]
+    public async Task DeviceIndependentGroup_OffersNextOnly()
+    {
+        MenuNode root = await Root(Mouse("a"));
+
+        List<string> rates = root.Children.Where(n => n.Name != "X2").SelectMany(Leaves)
+            .Where(l => l.CommandName == "Gear.PollingRate").Select(l => l.Parameters["Rate"]).ToList();
+        Assert.Equal(["next"], rates);
     }
 }

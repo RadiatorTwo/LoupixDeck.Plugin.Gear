@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using LoupixDeck.Plugin.Gear.Devices;
 using LoupixDeck.Plugin.Gear.Rendering;
 using LoupixDeck.PluginSdk;
@@ -15,7 +16,8 @@ namespace LoupixDeck.Plugin.Gear.Commands;
 internal abstract class GearValueCommand(IGearDeviceControl devices, Func<string, string> tr, IPluginLogger logger)
     : IAnimatedDisplayCommand, IDisplayImageCommand
 {
-    private volatile IReadOnlyList<GearDeviceState>? _rejectedAt;
+    // Per button: the device snapshot current after the rejected write; the mark ends when the registry replaces it.
+    private readonly ConcurrentDictionary<string, IReadOnlyList<GearDeviceState>> _rejectedAt = new(StringComparer.Ordinal);
 
     public abstract CommandDescriptor Descriptor { get; }
 
@@ -42,7 +44,6 @@ internal abstract class GearValueCommand(IGearDeviceControl devices, Func<string
     {
         try
         {
-            IReadOnlyList<GearDeviceState> snapshot = devices.Devices;
             string? request = Parameter(ctx, 0);
             string? deviceKey = Parameter(ctx, 1);
             if (devices.Find(deviceKey) is not { } device || !device.Capabilities.HasFlag(Capability))
@@ -50,14 +51,17 @@ internal abstract class GearValueCommand(IGearDeviceControl devices, Func<string
                 return;
             }
 
+            string button = ButtonKey(ctx);
             if (await Send(request, deviceKey))
             {
-                _rejectedAt = null;
+                _rejectedAt.TryRemove(button, out _);
             }
             else
             {
                 logger.Warn($"Gear: {Descriptor.CommandName} did not apply '{request}' to '{device.DisplayName}'.");
-                _rejectedAt = snapshot;
+
+                // Taken after the write: a failed write may already have refreshed the registry's snapshot.
+                _rejectedAt[button] = devices.Devices;
             }
 
             ctx.Host?.RequestButtonRefresh(Descriptor.CommandName);
@@ -89,12 +93,16 @@ internal abstract class GearValueCommand(IGearDeviceControl devices, Func<string
     {
         IReadOnlyList<GearDeviceState> snapshot = devices.Devices;
         GearDeviceState? device = devices.Find(Parameter(ctx, 1));
-        bool invalid = ReferenceEquals(_rejectedAt, snapshot);
+        bool invalid = _rejectedAt.TryGetValue(ButtonKey(ctx), out IReadOnlyList<GearDeviceState>? rejected) && ReferenceEquals(rejected, snapshot);
         (string? value, string? unit, string? detail) = device is not null && device.Capabilities.HasFlag(Capability)
             ? Describe(device)
             : (null, null, null);
         ValueTile.Draw(surface, tr, tr(Header), device, value, unit, detail, invalid, blinkOn);
     }
+
+    /// <summary>The host's key of the button; without one, buttons with the same parameter list share the mark.</summary>
+    private string ButtonKey(CommandContext ctx) =>
+        ButtonKeys.For(ctx, Descriptor.CommandName + ":" + string.Join("|", ctx.Parameters ?? []));
 
     /// <summary>A parameter by position; null when absent or empty. The host may pass no parameter array at all.</summary>
     private static string? Parameter(CommandContext ctx, int index) =>

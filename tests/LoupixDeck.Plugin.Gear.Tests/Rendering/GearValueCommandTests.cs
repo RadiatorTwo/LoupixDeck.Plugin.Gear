@@ -17,6 +17,9 @@ public sealed class GearValueCommandTests
 
         public IReadOnlyList<GearDeviceState> Devices { get; set; } = [];
 
+        /// <summary>Replaces the snapshot while a write is in flight, like a registry refresh after a failed write.</summary>
+        public bool SwapDuringWrite { get; set; }
+
         public GearDeviceState? Find(string? key) =>
             string.IsNullOrEmpty(key) ? Devices.FirstOrDefault() : Devices.FirstOrDefault(d => d.Key == key);
 
@@ -31,6 +34,11 @@ public sealed class GearValueCommandTests
         private Task<bool> Record(string call)
         {
             Calls.Add(call);
+            if (SwapDuringWrite)
+            {
+                Devices = [Mouse()];
+            }
+
             return Throw ? throw new InvalidOperationException("boom") : Task.FromResult(Result);
         }
     }
@@ -226,5 +234,36 @@ public sealed class GearValueCommandTests
         // no device, awake and asleep each look different; a mouse without data shows dashes
         Assert.Equal(3, rate.Take(3).Distinct().Count());
         Assert.Equal(3, dpi.Take(3).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task Execute_Rejection_MarksOnlyThePressedButton()
+    {
+        FakeControl control = new() { Devices = [Mouse()], Result = false };
+        PollingRateCommand command = new(control, t => t, new FakeLogger());
+        CommandContext pressed = Context("8000");
+        CommandContext other = Context("2000");
+        long otherBefore = Hash(s => command.Draw(other, s, true));
+        long pressedBefore = Hash(s => command.Draw(pressed, s, true));
+
+        await command.Execute(pressed);
+
+        Assert.NotEqual(pressedBefore, Hash(s => command.Draw(pressed, s, true)));
+        Assert.Equal(otherBefore, Hash(s => command.Draw(other, s, true)));
+    }
+
+    [Fact]
+    public async Task Execute_RejectionWhileRegistryRefreshesDuringWrite_StillShowsQuestionMark()
+    {
+        FakeControl control = new() { Devices = [Mouse()], Result = false, SwapDuringWrite = true };
+        PollingRateCommand command = new(control, t => t, new FakeLogger());
+        CommandContext ctx = Context("8000");
+        control.SwapDuringWrite = false;
+        long before = Hash(s => command.Draw(ctx, s, true));
+        control.SwapDuringWrite = true;
+
+        await command.Execute(ctx);
+
+        Assert.NotEqual(before, Hash(s => command.Draw(ctx, s, true)));
     }
 }
