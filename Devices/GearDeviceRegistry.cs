@@ -422,7 +422,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
         bool changed;
         try
         {
-            await entry.Gate.WaitAsync(ct);
+            await entry.Gate.WaitAsync(ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -438,7 +438,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
 
             try
             {
-                ok = await command(entry.Device, ct);
+                ok = await command(entry.Device, ct).ConfigureAwait(false);
             }
             catch (Exception ex) when (ct.IsCancellationRequested || entry.Removed || ex is ObjectDisposedException)
             {
@@ -449,6 +449,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
                 GearAvailability availability = ClassifyFailure(entry, ex);
                 GearDeviceState? p = entry.State;
                 ok = false;
+                entry.NextPoll = time.GetUtcNow() + AsleepInterval;
                 changed = Update(entry, Build(entry, availability, p?.Percent, p?.Charging ?? false, p?.Millivolts, p?.PollingRate, p?.Dpi, p?.LastContact));
                 if (changed)
                 {
@@ -458,7 +459,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
                 return false;
             }
 
-            changed = ok && await RefreshAfterWriteAsync(entry, ct);
+            changed = ok && await RefreshAfterWriteAsync(entry, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -502,7 +503,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             return false;
         }
 
-        return Update(entry, Build(entry, previous?.Availability ?? GearAvailability.Awake, previous?.Percent, previous?.Charging ?? false, previous?.Millivolts, rate, dpi, previous?.LastContact));
+        return Update(entry, Build(entry, GearAvailability.Awake, previous?.Percent, previous?.Charging ?? false, previous?.Millivolts, rate, dpi, time.GetUtcNow()));
     }
 
     private GearAvailability ClassifyFailure(Entry entry, Exception ex)

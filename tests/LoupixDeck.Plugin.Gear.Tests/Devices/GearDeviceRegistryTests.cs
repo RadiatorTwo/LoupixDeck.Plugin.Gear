@@ -246,6 +246,37 @@ public sealed class GearDeviceRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task WriteCommand_ThrowsThenSucceeds_ReturnsToAwake()
+    {
+        FakeDevice device = await PlugInAsync();
+        device.WriteFailure = new IOException("write");
+        Assert.False(await _registry.SetDpiAsync(null, 800));
+        device.WriteFailure = null;
+        _time.Advance(TimeSpan.FromSeconds(10));
+
+        Assert.True(await _registry.SetDpiAsync(null, 1600));
+
+        GearDeviceState state = _registry.Devices[0];
+        Assert.Equal(GearAvailability.Awake, state.Availability);
+        Assert.Equal(_time.GetUtcNow(), state.LastContact);
+    }
+
+    [Fact]
+    public async Task WriteCommand_Throws_DevicePolledAgainSoon()
+    {
+        FakeDevice device = await PlugInAsync();
+        device.WriteFailure = new IOException("write");
+        Assert.False(await _registry.SetDpiAsync(null, 800));
+        int before = device.AwakeCalls;
+
+        _time.Advance(GearDeviceRegistry.AsleepInterval);
+        await _registry.TickAsync();
+
+        Assert.Equal(before + 1, device.AwakeCalls);
+        Assert.Equal(GearAvailability.Awake, _registry.Devices[0].Availability);
+    }
+
+    [Fact]
     public async Task StepDpi_WrapsAndRefreshesState()
     {
         FakeDevice device = await PlugInAsync(configure: d => d.ActiveStage = 2);
