@@ -16,7 +16,9 @@ internal sealed class PollingRateCommand(IGearDeviceControl devices, Func<string
         CommandName = CommandName,
         DisplayName = "Gear Polling Rate",
         Group = "Gear",
-        Icon = "\U000F0379",
+        Icon = "\U000F037D", // mdi-mouse
+        // Reached through the dynamic menu (GearMenu), prefilled per mouse.
+        HiddenFromMenu = true,
         Description = "Show the polling rate of a mouse and switch it: next or a rate in Hz",
         ParameterTemplate = "({Rate},{Device})",
         Parameters = [new CommandParameter("Rate", typeof(string)), new CommandParameter("Device", typeof(string))],

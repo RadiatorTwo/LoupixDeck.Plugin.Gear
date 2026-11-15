@@ -25,7 +25,9 @@ internal sealed class GearPagesCommand(IGearDeviceSource devices, Func<string, s
         CommandName = CommandName,
         DisplayName = "Gear Pages",
         Group = "Gear",
-        Icon = "\U000F0379",
+        Icon = "\U000F037D", // mdi-mouse
+        // Reached through the dynamic menu (GearMenu), prefilled per mouse.
+        HiddenFromMenu = true,
         Description = "Show battery, polling rate and DPI of your mice on a touch button; press it for the next page",
         ParameterTemplate = "({Pages})",
         Parameters = [new CommandParameter("Pages", typeof(string))],

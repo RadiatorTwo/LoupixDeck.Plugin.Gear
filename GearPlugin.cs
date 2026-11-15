@@ -68,6 +68,17 @@ public sealed class GearPlugin : LoupixPlugin, IMenuContributor
 
     public override IEnumerable<IPluginCommand> GetCommands() => _commands;
 
+    public override IReadOnlyList<CommandGroupDescriptor> GetCommandGroups() =>
+    [
+        new CommandGroupDescriptor
+        {
+            Group = "Gear",
+            Description = "Battery, polling rate and DPI of your mice",
+            Icon = "\U000F037D", // mdi-mouse
+            Section = CommandGroupSection.Plugins
+        }
+    ];
+
     public Task<IReadOnlyList<MenuNode>> GetMenuNodes(ButtonTargets target) =>
         _menu?.GetMenuNodes(target) ?? Task.FromResult<IReadOnlyList<MenuNode>>([]);
 

@@ -16,7 +16,9 @@ internal sealed class DpiCommand(IGearDeviceControl devices, Func<string, string
         CommandName = CommandName,
         DisplayName = "Gear DPI",
         Group = "Gear",
-        Icon = "\U000F0379",
+        Icon = "\U000F037D", // mdi-mouse
+        // Reached through the dynamic menu (GearMenu), prefilled per mouse.
+        HiddenFromMenu = true,
         Description = "Show the DPI of a mouse and switch it: next, previous or a DPI value",
         ParameterTemplate = "({Dpi},{Device})",
         Parameters = [new CommandParameter("Dpi", typeof(string)), new CommandParameter("Device", typeof(string))],

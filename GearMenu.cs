@@ -1,3 +1,4 @@
+using System.Globalization;
 using LoupixDeck.Plugin.Gear.Commands;
 using LoupixDeck.Plugin.Gear.Devices;
 using LoupixDeck.PluginSdk;
@@ -5,9 +6,10 @@ using LoupixDeck.PluginSdk;
 namespace LoupixDeck.Plugin.Gear;
 
 /// <summary>
-/// Builds the editor menu on demand: one group per detected mouse (Pages, Polling rate, DPI, prefilled with the mouse's
-/// key) plus device-independent entries that act on the first mouse. The SDK in use has no menu refresh request, so a
-/// mouse that appears later shows up the next time the menu is opened.
+/// Builds the editor menu on demand: one paging tile over all mice, then one group per detected mouse (its page,
+/// polling rate and DPI tiles, prefilled with the mouse's key). The commands themselves are hidden from the static
+/// list. The SDK in use has no menu refresh request, so a mouse that appears later shows up the next time the menu is
+/// opened.
 /// </summary>
 internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> tr) : IMenuContributor
 {
@@ -19,7 +21,11 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
             return Task.FromResult<IReadOnlyList<MenuNode>>([]);
         }
 
-        List<MenuNode> children = [];
+        List<MenuNode> children =
+        [
+            Command(tr("All mice (press to cycle)"), GearPagesCommand.CommandName, ("Pages", GearPageSelection.All)),
+        ];
+
         List<GearDeviceState> known = devices.Devices.Where(d => !string.IsNullOrEmpty(d.Key)).ToList();
         foreach (GearDeviceState device in known)
         {
@@ -30,8 +36,6 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
         {
             children.Add(new MenuNode { Name = tr("No mouse detected") });
         }
-
-        children.AddRange(DeviceEntries(null));
 
         IReadOnlyList<MenuNode> result = [new MenuNode { Name = tr("Gear"), Children = children }];
         return Task.FromResult(result);
@@ -44,25 +48,26 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
         return sameName.Count > 1 ? $"{device.DisplayName} {sameName.IndexOf(device) + 1}" : device.DisplayName;
     }
 
-    /// <summary>The entries of one mouse, or the device-independent ones (first mouse) when <paramref name="device"/> is null.</summary>
-    private List<MenuNode> DeviceEntries(GearDeviceState? device)
+    /// <summary>The entries of one mouse, all prefilled with its key.</summary>
+    private List<MenuNode> DeviceEntries(GearDeviceState device)
     {
-        string? key = device?.Key;
+        string key = device.Key!;
         List<MenuNode> entries =
         [
-            Command(tr("Pages"), GearPagesCommand.CommandName, ("Pages", key ?? GearPageSelection.All)),
+            Command(tr("Device page"), GearPagesCommand.CommandName, ("Pages", key)),
         ];
 
-        if (device is null || device.Capabilities.HasFlag(GearCapabilities.PollingRate))
+        if (device.Capabilities.HasFlag(GearCapabilities.PollingRate))
         {
             List<MenuNode> rates = [Command(tr("Next"), PollingRateCommand.CommandName, Request("Rate", GearCommandParameters.Next, key))];
-            // Only the rates the mouse accepts on its current link; the device-independent entries offer none (next only).
-            rates.AddRange((device?.AllowedPollingRates ?? []).Select(hz =>
-                Command($"{hz} {tr("HZ")}", PollingRateCommand.CommandName, Request("Rate", hz.ToString(), key))));
+            // Only the rates the mouse accepts on its current link.
+            rates.AddRange((device.AllowedPollingRates ?? []).Select(hz =>
+                Command($"{hz} {tr("HZ")}", PollingRateCommand.CommandName,
+                    Request("Rate", hz.ToString(CultureInfo.InvariantCulture), key))));
             entries.Add(new MenuNode { Name = tr("Polling rate"), Children = rates });
         }
 
-        if (device is null || device.Capabilities.HasFlag(GearCapabilities.Dpi))
+        if (device.Capabilities.HasFlag(GearCapabilities.Dpi))
         {
             entries.Add(new MenuNode
             {
@@ -78,8 +83,7 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
         return entries;
     }
 
-    private static (string, string)[] Request(string name, string value, string? key) =>
-        key is null ? [(name, value)] : [(name, value), ("Device", key)];
+    private static (string, string)[] Request(string name, string value, string key) => [(name, value), ("Device", key)];
 
     private static MenuNode Command(string name, string commandName, params (string Name, string Value)[] parameters) => new()
     {

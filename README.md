@@ -24,8 +24,9 @@ The X2A v3 (`3710:5403`, `3710:3408`) uses a different protocol and is not suppo
 
 ## Commands
 
-All commands are touch-button tiles in the group **Gear**. The command menu lists one entry per
-detected mouse, prefilled with that mouse's key.
+All commands are touch-button tiles in the group **Gear**. The command menu offers one paging
+tile over all mice ("All mice"), then one group per detected mouse with its device page, polling
+rate and DPI tiles, prefilled with that mouse's key.
 
 | Command | Parameters | Meaning |
 |---|---|---|

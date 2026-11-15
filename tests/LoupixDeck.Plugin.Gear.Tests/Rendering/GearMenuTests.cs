@@ -51,13 +51,24 @@ public sealed class GearMenuTests
     }
 
     [Fact]
-    public async Task DeviceWithoutKey_IsSkipped_AndDeviceIndependentEntriesRemain()
+    public async Task DeviceWithoutKey_IsSkipped_AndOnlyTheAllMiceEntryRemains()
     {
         MenuNode root = await Root(Mouse(null));
 
         Assert.DoesNotContain(root.Children, n => n.Name == "X2");
-        Assert.Contains(Leaves(root), l => l.CommandName == "Gear.PollingRate" && !l.Parameters.ContainsKey("Device"));
-        Assert.Contains(Leaves(root), l => l.CommandName == "Gear.Dpi" && l.Parameters["Dpi"] == "next" && !l.Parameters.ContainsKey("Device"));
+        MenuNode leaf = Assert.Single(Leaves(root));
+        Assert.Equal("Gear.Pages", leaf.CommandName);
+        Assert.Equal("all", leaf.Parameters["Pages"]);
+    }
+
+    [Fact]
+    public async Task OnePagesEntryPerScope_AndNoDeviceIndependentRateOrDpiEntries()
+    {
+        MenuNode root = await Root(Mouse("a"));
+
+        List<MenuNode> pages = Leaves(root).Where(l => l.CommandName == "Gear.Pages").ToList();
+        Assert.Equal(["all", "a"], pages.Select(l => l.Parameters["Pages"]));
+        Assert.All(Leaves(root).Where(l => l.CommandName != "Gear.Pages"), l => Assert.Equal("a", l.Parameters["Device"]));
     }
 
     [Fact]
@@ -76,15 +87,5 @@ public sealed class GearMenuTests
         List<string> rates = Leaves(root.Children.Single(n => n.Name == "X2"))
             .Where(l => l.CommandName == "Gear.PollingRate").Select(l => l.Parameters["Rate"]).ToList();
         Assert.Equal(["next", "125", "250", "500", "1000"], rates);
-    }
-
-    [Fact]
-    public async Task DeviceIndependentGroup_OffersNextOnly()
-    {
-        MenuNode root = await Root(Mouse("a"));
-
-        List<string> rates = root.Children.Where(n => n.Name != "X2").SelectMany(Leaves)
-            .Where(l => l.CommandName == "Gear.PollingRate").Select(l => l.Parameters["Rate"]).ToList();
-        Assert.Equal(["next"], rates);
     }
 }
