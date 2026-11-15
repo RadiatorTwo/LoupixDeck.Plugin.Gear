@@ -1,4 +1,13 @@
 {
   "Gear": "Gear",
-  "Detects gaming mice and shows battery, polling rate and DPI; switches polling rate and DPI.": "Erkennt Gaming-Mäuse und zeigt Akku, Abfragerate und DPI an; schaltet Abfragerate und DPI um."
+  "Detects gaming mice and shows battery, polling rate and DPI; switches polling rate and DPI.": "Erkennt Gaming-Mäuse und zeigt Akku, Abfragerate und DPI an; schaltet Abfragerate und DPI um.",
+  "GEAR": "GEAR",
+  "NO DEVICE": "KEIN GERÄT",
+  "DEVICES": "GERÄTE",
+  "SLEEP": "SCHLÄFT",
+  "NO ACCESS": "KEIN ZUGRIFF",
+  "ERROR": "FEHLER",
+  "HZ": "HZ",
+  "DPI": "DPI",
+  "LINK": "LINK"
 }

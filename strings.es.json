@@ -1,4 +1,13 @@
 {
   "Gear": "Gear",
-  "Detects gaming mice and shows battery, polling rate and DPI; switches polling rate and DPI.": "Detecta ratones gaming y muestra batería, frecuencia de sondeo y DPI; cambia la frecuencia de sondeo y los DPI."
+  "Detects gaming mice and shows battery, polling rate and DPI; switches polling rate and DPI.": "Detecta ratones gaming y muestra batería, frecuencia de sondeo y DPI; cambia la frecuencia de sondeo y los DPI.",
+  "GEAR": "GEAR",
+  "NO DEVICE": "SIN DISPOSITIVO",
+  "DEVICES": "EQUIPOS",
+  "SLEEP": "SUSPENDIDO",
+  "NO ACCESS": "SIN ACCESO",
+  "ERROR": "ERROR",
+  "HZ": "HZ",
+  "DPI": "DPI",
+  "LINK": "ENLACE"
 }
