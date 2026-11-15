@@ -305,21 +305,30 @@ internal sealed class PulsarDevice : IGearDevice
         try
         {
             ObjectDisposedException.ThrowIf(_disposed.IsCancellationRequested, this);
-            IHidConnection connection = _connection ??= _transport.Open(_info);
-            for (int attempt = 0; attempt < attempts; attempt++)
+            try
             {
-                token.ThrowIfCancellationRequested();
-                byte[]? reply = await Task.Run(() => SendAndAwait(connection, request, cmd, token), CancellationToken.None);
-                if (reply is not null)
+                IHidConnection connection = _connection ??= _transport.Open(_info);
+                for (int attempt = 0; attempt < attempts; attempt++)
                 {
-                    onReply?.Invoke(reply);
-                    return reply;
+                    token.ThrowIfCancellationRequested();
+                    byte[]? reply = await Task.Run(() => SendAndAwait(connection, request, cmd, token), CancellationToken.None);
+                    if (reply is not null)
+                    {
+                        onReply?.Invoke(reply);
+                        return reply;
+                    }
                 }
-            }
 
-            // A cancelled read looks like a timeout; do not report it as "asleep".
-            token.ThrowIfCancellationRequested();
-            return null;
+                // A cancelled read looks like a timeout; do not report it as "asleep".
+                token.ThrowIfCancellationRequested();
+                return null;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // A failed handle stays dead after a replug or re-enumeration: drop it so the next command reopens.
+                CloseConnection();
+                throw;
+            }
         }
         finally
         {

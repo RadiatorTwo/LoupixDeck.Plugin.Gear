@@ -16,6 +16,12 @@ internal sealed class FakeHidConnection(Func<byte[], IEnumerable<byte[]>>? respo
 
     public int DisposeCount;
 
+    /// <summary>When set, Read throws it instead of returning a report (a dead handle).</summary>
+    public Exception? ReadFailure { get; init; }
+
+    /// <summary>Queues a report as if the mouse had sent it before the next request.</summary>
+    public void Preload(byte[] report) => _inbound.Enqueue(report);
+
     public void SendOutputReport(ReadOnlySpan<byte> report)
     {
         byte[] copy = report.ToArray();
@@ -31,6 +37,11 @@ internal sealed class FakeHidConnection(Func<byte[], IEnumerable<byte[]>>? respo
 
     public int Read(Span<byte> buffer, TimeSpan timeout)
     {
+        if (ReadFailure is not null)
+        {
+            throw ReadFailure;
+        }
+
         if (ReadGate is not null)
         {
             ReadEntered.Set();
@@ -57,4 +68,14 @@ internal sealed class FakeHidTransport(IHidConnection connection) : IHidTranspor
     public IReadOnlyList<HidDeviceInfo> Enumerate() => [];
 
     public IHidConnection Open(HidDeviceInfo device) => connection;
+}
+
+/// <summary>Hands out one scripted connection per Open call and counts the calls.</summary>
+internal sealed class SequenceHidTransport(params IHidConnection[] connections) : IHidTransport
+{
+    public int OpenCount { get; private set; }
+
+    public IReadOnlyList<HidDeviceInfo> Enumerate() => [];
+
+    public IHidConnection Open(HidDeviceInfo device) => connections[OpenCount++];
 }

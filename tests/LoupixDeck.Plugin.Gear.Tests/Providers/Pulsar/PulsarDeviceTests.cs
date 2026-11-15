@@ -30,6 +30,22 @@ public sealed class PulsarDeviceTests
     }
 
     [Fact]
+    public async Task BrokenConnection_IsDroppedAndReopenedOnNextCommand()
+    {
+        FakeHidConnection dead = new() { ReadFailure = new IOException("handle is gone") };
+        FakeHidConnection alive = new(_ => [PowerReply(0x5F, false, 4105)]);
+        SequenceHidTransport transport = new(dead, alive);
+        using PulsarDevice device = new(Vendor, transport, "Pulsar X2 CrazyLight", true);
+
+        await Assert.ThrowsAsync<IOException>(() => device.ReadPowerAsync(CancellationToken.None));
+        GearPowerReading? reading = await device.ReadPowerAsync(CancellationToken.None);
+
+        Assert.Equal(new GearPowerReading(99, false, 4105), reading);
+        Assert.Equal(2, transport.OpenCount);
+        Assert.Equal(1, dead.DisposeCount);
+    }
+
+    [Fact]
     public void Match_FindsVendorCollectionOnly()
     {
         List<HidDeviceInfo> all =
