@@ -10,7 +10,7 @@ LoupixDeck plugin that detects gaming mice (Pulsar first) and shows battery, pol
 - **Target framework:** `net10.0`
 - **SDK package:** `LoupixDeck.PluginSdk` 1.31.1 with `<ExcludeAssets>runtime</ExcludeAssets>`. The host provides the SDK DLL; never ship it.
 - **RenderKit:** `LoupixDeck.RenderKit` 1.0.0 without ExcludeAssets: its DLL ships inside the plugin package.
-- **Feeds:** nuget.org plus the local `..\LoupixDeck.RenderKit\nupkg` (see `nuget.config`).
+- **Feeds:** nuget.org only (see `nuget.config`).
 
 ## Build, test, pack
 
