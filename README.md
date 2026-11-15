@@ -67,8 +67,10 @@ dongle (`1038:1726`), is untested.
   Wireless and Prime (Mini) Wireless. Wired-only models show no battery.
 - These mice **cannot report their polling rate or DPI**. Both stay empty until you set them with
   a Gear button; after that the plugin shows the value it wrote. A change made in SteelSeries GG or
-  with the DPI button on the mouse is not seen, and `next` / `previous` only work once a value is
-  known. (The Rival 650 does send an event on interface 3 when its DPI button is pressed, but it
+  with the DPI button on the mouse is not seen.
+- As for Logitech, `next`, `previous` and the menu use a fixed ladder (400, 800, 1600, 3200, 6400,
+  12800, 25600 DPI, limited to what the sensor supports, plus the value Gear set last). Before
+  the first write `next` starts at the lowest rung and `previous` at the highest. (The Rival 650 does send an event on interface 3 when its DPI button is pressed, but it
   carries no stage, so it is not used.)
 - Setting the DPI makes the mouse run at that value: two-slot models (Rival 650, Rival 300/310/
   500/600/700, Sensei 310, ...) get the value in both slots, newer models get a single preset. A
