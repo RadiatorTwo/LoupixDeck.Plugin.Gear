@@ -1,6 +1,6 @@
 // Payload layouts and parsing logic ported from:
 //  - openlogi-net (MIT, Copyright (c) 2026 LoxSmoke): AdjustableDpiFeature.ParseDpiListPayload,
-//    DeviceInformation.Parse, BatteryVoltageFeature (voltage curve), UnifiedBatteryFeature, DeviceTypeAndNameFeature.
+//    DeviceInformation.Parse, BatteryVoltageFeature (payload layout), UnifiedBatteryFeature, DeviceTypeAndNameFeature.
 //  - openlogi-hidpp (0BSD, fork of lus/logy): report_rate.rs (0x8060), extended_report_rate.rs (0x8061),
 //    battery_status.rs (0x1000).
 // The DPI ladder, the key and the link rules are this plugin's own.
@@ -31,12 +31,12 @@ internal static class LogitechDecoding
     // DPI values tried for the stages of Next/Previous, in order.
     private static readonly int[] DpiLadder = [400, 800, 1600, 3200, 6400, 12800, 25600];
 
-    // Single-cell li-ion discharge curve (mV, percent), descending voltage; interpolated linearly.
-    // Ported from openlogi-net BatteryVoltageFeature; unverified against G HUB.
+    // Generic single-cell li-ion discharge curve (mV, percent), descending voltage; interpolated linearly.
+    // A rough approximation, unverified against G HUB. It is our own table, not taken from Solaar or any other project.
     private static readonly (int Millivolts, int Percent)[] VoltageCurve =
     [
-        (4186, 100), (4067, 90), (3989, 80), (3922, 70), (3859, 60), (3811, 50),
-        (3753, 40), (3729, 30), (3677, 20), (3641, 10), (3550, 5), (3500, 2), (3300, 0),
+        (4200, 100), (4100, 90), (4000, 78), (3900, 62), (3800, 45),
+        (3700, 25), (3600, 10), (3500, 3), (3400, 0),
     ];
 
     // DeviceInformation

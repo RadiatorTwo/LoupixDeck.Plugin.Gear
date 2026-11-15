@@ -236,16 +236,14 @@ public sealed class LogitechDecodingTests
         Assert.False(LogitechDecoding.UnifiedBatteryReportsPercentage(Payload(0x0F, 0b01)));
     }
 
-    // Vectors from openlogi-net BatteryVoltageTests (MIT).
-
     [Theory]
     [InlineData(4300, 100)]
-    [InlineData(4186, 100)]
-    [InlineData(3300, 0)]
+    [InlineData(4200, 100)]
+    [InlineData(4000, 78)]
+    [InlineData(3800, 45)]
+    [InlineData(3600, 10)]
+    [InlineData(3400, 0)]
     [InlineData(3000, 0)]
-    [InlineData(3811, 50)]
-    [InlineData(3989, 80)]
-    [InlineData(3641, 10)]
     public void VoltageCurve_HitsPointsAndClamps(int millivolts, int percent)
     {
         Assert.Equal(percent, LogitechDecoding.PercentFromMillivolts(millivolts));
@@ -254,10 +252,10 @@ public sealed class LogitechDecodingTests
     [Fact]
     public void VoltageCurve_InterpolatesAndIsMonotonic()
     {
-        Assert.InRange(LogitechDecoding.PercentFromMillivolts(3835), 54, 56);
+        Assert.Equal(54, LogitechDecoding.PercentFromMillivolts(3850));
 
         int previous = 0;
-        for (int mv = 3300; mv <= 4200; mv += 10)
+        for (int mv = 3300; mv <= 4300; mv += 10)
         {
             int percent = LogitechDecoding.PercentFromMillivolts(mv);
             Assert.True(percent >= previous, $"dropped at {mv} mV");
@@ -268,8 +266,8 @@ public sealed class LogitechDecodingTests
     [Fact]
     public void BatteryVoltage_DecodesMillivoltsAndFlags()
     {
-        Assert.Equal(new GearPowerReading(50, false, 3811), LogitechDecoding.DecodeBatteryVoltage(Payload(0x0E, 0xE3, 0x00)));
-        Assert.Equal(new GearPowerReading(50, true, 3811), LogitechDecoding.DecodeBatteryVoltage(Payload(0x0E, 0xE3, 0x80)));
+        Assert.Equal(new GearPowerReading(47, false, 3811), LogitechDecoding.DecodeBatteryVoltage(Payload(0x0E, 0xE3, 0x00)));
+        Assert.Equal(new GearPowerReading(47, true, 3811), LogitechDecoding.DecodeBatteryVoltage(Payload(0x0E, 0xE3, 0x80)));
         Assert.Equal(new GearPowerReading(100, false, 3811), LogitechDecoding.DecodeBatteryVoltage(Payload(0x0E, 0xE3, 0xC0)));
     }
 
