@@ -97,10 +97,15 @@ public sealed class GearValueCommandTests
     {
         Assert.Equal(GearRequestKind.Next, GearCommandParameters.ParseDpi("next").Kind);
         Assert.Equal(new GearRequest(GearRequestKind.Value, 1600), GearCommandParameters.ParseDpi("1600"));
+        Assert.Equal(new GearRequest(GearRequestKind.Value, 10), GearCommandParameters.ParseDpi("10"));
+        Assert.Equal(new GearRequest(GearRequestKind.Value, 32000), GearCommandParameters.ParseDpi("32000"));
     }
 
     [Theory]
     [InlineData("0")]
+    [InlineData("9")]
+    [InlineData("32001")]
+    [InlineData("100000")]
     [InlineData("abc")]
     [InlineData("")]
     public void ParseDpi_Garbage_Invalid(string text) => Assert.Equal(GearRequestKind.Invalid, GearCommandParameters.ParseDpi(text).Kind);

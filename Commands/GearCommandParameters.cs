@@ -1,4 +1,5 @@
 using System.Globalization;
+using LoupixDeck.Plugin.Gear.Providers.Pulsar;
 
 namespace LoupixDeck.Plugin.Gear.Commands;
 
@@ -25,8 +26,6 @@ internal static class GearCommandParameters
     /// <summary>The rates the command accepts; whether a device accepts one on its current link is up to the device.</summary>
     public static readonly IReadOnlyList<int> KnownRates = [125, 250, 500, 1000, 2000, 4000, 8000];
 
-    private const int MaxDpi = 100_000;
-
     public static GearRequest ParseRate(string? text)
     {
         string token = (text ?? string.Empty).Trim();
@@ -51,7 +50,7 @@ internal static class GearCommandParameters
             return new GearRequest(GearRequestKind.Previous);
         }
 
-        return TryNumber(token, out int dpi) && dpi is > 0 and <= MaxDpi ? new GearRequest(GearRequestKind.Value, dpi) : GearRequest.Invalid;
+        return TryNumber(token, out int dpi) && dpi is >= PulsarDpi.MinDpi and <= PulsarDpi.MaxDpi ? new GearRequest(GearRequestKind.Value, dpi) : GearRequest.Invalid;
     }
 
     private static bool TryNumber(string token, out int value) =>

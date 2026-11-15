@@ -273,6 +273,18 @@ public sealed class GearDeviceRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task WriteCommand_RejectedArgument_ReturnsFalseWithoutErrorState()
+    {
+        FakeDevice device = await PlugInAsync();
+        device.WriteFailure = new ArgumentOutOfRangeException("dpi");
+
+        Assert.False(await _registry.SetDpiAsync(null, 50000));
+
+        Assert.Equal(GearAvailability.Awake, _registry.Devices[0].Availability);
+        Assert.Empty(_logger.Errors);
+    }
+
+    [Fact]
     public async Task WriteCommand_ThrowsThenSucceeds_ReturnsToAwake()
     {
         FakeDevice device = await PlugInAsync();

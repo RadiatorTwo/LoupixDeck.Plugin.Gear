@@ -450,6 +450,12 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
             {
                 return false;
             }
+            catch (ArgumentException ex)
+            {
+                // The device refused the value itself (out of range): a rejected request, not a device failure.
+                logger.Warn($"Gear: {entry.Device.Name} rejected the request: {ex.Message}");
+                return false;
+            }
             catch (Exception ex)
             {
                 GearAvailability availability = ClassifyFailure(entry, ex);
