@@ -1,6 +1,6 @@
 # LoupixDeck.Plugin.Gear
 
-Detects gaming mice (Pulsar and Logitech) and shows battery, polling rate and DPI on a Loupedeck device. Polling rate and
+Detects gaming mice (Pulsar, Logitech and SteelSeries) and shows battery, polling rate and DPI on a Loupedeck device. Polling rate and
 DPI can be switched with a press.
 
 The plugin supports **Windows and Linux** and needs LoupixDeck with Plugin SDK 1.31 or newer. Mice
@@ -55,6 +55,27 @@ replugged or G HUB takes over again. Reading never changes the mode.
 - Mice that only report DPI through `0x2202` (extended DPI) show no DPI, and devices that only
   speak HID++ 1.0 are not supported.
 
+### SteelSeries
+
+SteelSeries mice from the [rivalcfg](https://github.com/flozz/rivalcfg) device list (76 USB ids:
+Aerox 3/5/9, Prime, Prime+, Prime Mini, Prime Wireless, Rival 3/5/95/100/105/106/110/300/300S/310/
+500/600/650/700/710, Rival 3 (Wireless) Gen 2, Sensei 310/TEN/[RAW], Kana v2, Kinzu v2). Only the
+**Rival 650 Wireless on the cable (`1038:172b`) is tested**; every other id, including the Rival 650
+dongle (`1038:1726`), is untested.
+
+- Battery is shown for the mice that report it: Rival 650, Rival 3 Wireless (Gen 2), Aerox 3/5/9
+  Wireless and Prime (Mini) Wireless. Wired-only models show no battery.
+- These mice **cannot report their polling rate or DPI**. Both stay empty until you set them with
+  a Gear button; after that the plugin shows the value it wrote. A change made in SteelSeries GG or
+  with the DPI button on the mouse is not seen, and `next` / `previous` only work once a value is
+  known.
+- Setting the DPI makes the mouse run at that value: two-slot models (Rival 650, Rival 300/310/
+  500/600/700, Sensei 310, ...) get the value in both slots, newer models get a single preset. A
+  value snaps to the nearest one the sensor supports.
+- Nothing is saved to the mouse's memory, so a replug restores the settings stored in the mouse.
+- The key of a mouse is `steelseries:model:<product id>`, plus the USB serial if the mouse has a
+  real one. Cable and dongle have different product ids, so they count as two devices.
+
 ## Commands
 
 All commands are touch-button tiles in the group **Gear**. The command menu offers one paging
@@ -89,9 +110,10 @@ itself. To give your user access, create `/etc/udev/rules.d/70-loupixdeck-gear.r
 KERNEL=="hidraw*", ATTRS{idVendor}=="3710", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="3554", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="046d", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", TAG+="uaccess"
 ```
 
-The `046d` line is for Logitech receivers and mice.
+The `046d` line is for Logitech receivers and mice, the `1038` line for SteelSeries.
 
 Then reload the rules and replug the dongle:
 
@@ -117,5 +139,6 @@ loupix install       # copies the plugin into the LoupixDeck plugins folder
 ## Third-party
 
 The Pulsar protocol was re-implemented from MIT-licensed projects. The Logitech provider ports
-code and logic from openlogi-net (MIT) and openlogi-hidpp (0BSD); see
+code and logic from openlogi-net (MIT) and openlogi-hidpp (0BSD). The SteelSeries provider ports
+the device table and value encodings of rivalcfg (WTFPL); see
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
