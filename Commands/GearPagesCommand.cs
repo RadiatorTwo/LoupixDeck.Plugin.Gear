@@ -10,7 +10,7 @@ namespace LoupixDeck.Plugin.Gear.Commands;
 /// <summary>
 /// A paging tile: one page per mouse plus an overview, and a key press moves that button to the next page. The
 /// "Pages" parameter is empty or "all" (every device and the overview) or '|'-separated tokens of device keys and
-/// "overview" ("pulsar:model:060a|overview"). Several Gear.Pages commands chained on one button add up to one
+/// "overview" ("pulsar:model:5717|overview"). Several Gear.Pages commands chained on one button add up to one
 /// cycle in sequence order. Pages without a device are skipped and the header n/N counts only the pages shown.
 /// The current page is kept per button and resets on a restart.
 /// </summary>

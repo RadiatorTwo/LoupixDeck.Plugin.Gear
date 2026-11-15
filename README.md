@@ -34,7 +34,7 @@ detected mouse, prefilled with that mouse's key.
 | `Gear.Dpi` | `Dpi`, `Device` | Shows the active DPI value and stage; a press sets it. |
 
 - **`Pages`** is empty or `all` (every mouse page and the overview), or `|`-separated tokens that
-  are device keys or `overview`, for example `pulsar:model:060a|overview`. Several `Gear.Pages`
+  are device keys or `overview`, for example `pulsar:model:5717|overview`. Several `Gear.Pages`
   commands chained on one button add up to one cycle in sequence order. Pages without a device are
   skipped.
 - **`Rate`** is `next` (cycles the rates the mouse accepts on its current link) or a rate in Hz:
@@ -64,7 +64,8 @@ sudo udevadm control --reload && sudo udevadm trigger
 
 ## Status
 
-Reading (battery, polling rate, DPI) has been verified on a Pulsar X2 CrazyLight 8K dongle.
+Reading the battery and the polling rate has been verified on a Pulsar X2 CrazyLight 8K dongle.
+Reading the DPI stages has not been confirmed on hardware yet.
 **Writing the polling rate and the DPI has not been confirmed on hardware yet**; treat it as
 untested until users report that it works.
 
