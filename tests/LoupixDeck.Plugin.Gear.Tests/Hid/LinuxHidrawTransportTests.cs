@@ -72,4 +72,19 @@ public sealed class LinuxHidrawTransportTests
         HidDeviceInfo info = Assert.Single(transport.Enumerate(), d => d.UsagePage == 0xFF02);
         Assert.Throws<HidAccessException>(() => transport.Open(info));
     }
+
+    [Fact]
+    public void Canonicalize_follows_links_in_every_segment_like_real_sysfs()
+    {
+        const string Hid = "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-3/1-3:1.1/0003:3710:5406.0005";
+        Dictionary<string, string> links = new()
+        {
+            ["/sys/class/hidraw/hidraw3"] = "../../devices/pci0000:00/0000:00:14.0/usb1/1-3/1-3:1.1/0003:3710:5406.0005/hidraw/hidraw3",
+            [Hid + "/hidraw/hidraw3/device"] = "../../../0003:3710:5406.0005",
+        };
+
+        string result = SysfsPath.Canonicalize("/sys/class/hidraw/hidraw3/device", p => links.GetValueOrDefault(p));
+
+        Assert.Equal(Hid, result);
+    }
 }

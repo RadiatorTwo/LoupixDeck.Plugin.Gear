@@ -158,28 +158,32 @@ internal static class ReportDescriptor
 
     private static void AddReport(Dictionary<byte, (int Input, int Output)> reports, byte reportId, bool input, int bits)
     {
+        // Bits are summed per report and direction; Build converts to bytes once.
         reports.TryGetValue(reportId, out (int Input, int Output) current);
-        int bytes = (bits + 7) / 8;
-        // Several items of one report add up; the report id byte is counted once.
-        int idByte = reportId != 0 ? 1 : 0;
         if (input)
         {
-            current.Input = (current.Input == 0 ? idByte : current.Input) + bytes;
+            current.Input += bits;
         }
         else
         {
-            current.Output = (current.Output == 0 ? idByte : current.Output) + bytes;
+            current.Output += bits;
         }
 
         reports[reportId] = current;
     }
 
-    private static Collection Build(ushort page, ushort usage, Dictionary<byte, (int Input, int Output)> reports)
+    private static Collection Build(ushort page, ushort usage, Dictionary<byte, (int Input, int Output)> reportBits)
     {
+        Dictionary<byte, (int Input, int Output)> reports = [];
         int input = 0;
         int output = 0;
-        foreach ((int reportIn, int reportOut) in reports.Values)
+        foreach ((byte reportId, (int inBits, int outBits)) in reportBits)
         {
+            // A direction without items has length 0; otherwise whole bytes plus the report id byte.
+            int idByte = reportId != 0 ? 1 : 0;
+            int reportIn = inBits > 0 ? ((inBits + 7) / 8) + idByte : 0;
+            int reportOut = outBits > 0 ? ((outBits + 7) / 8) + idByte : 0;
+            reports[reportId] = (reportIn, reportOut);
             input = Math.Max(input, reportIn);
             output = Math.Max(output, reportOut);
         }

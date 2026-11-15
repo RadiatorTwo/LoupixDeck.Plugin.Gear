@@ -53,6 +53,21 @@ public sealed class ReportDescriptorTests
     }
 
     [Fact]
+    public void Bit_packed_items_are_summed_before_rounding_to_bytes()
+    {
+        // Five one-bit buttons plus three constant padding bits: one byte, no report id.
+        byte[] descriptor =
+        [
+            0x05, 0x01, 0x09, 0x02, 0xA1, 0x01,
+            0x95, 0x05, 0x75, 0x01, 0x81, 0x02,
+            0x95, 0x01, 0x75, 0x03, 0x81, 0x01,
+            0xC0,
+        ];
+
+        Assert.Equal(1, ReportDescriptor.Collections(descriptor)[0].InputLength);
+    }
+
+    [Fact]
     public void Truncated_descriptor_does_not_throw()
     {
         Assert.Empty(ReportDescriptor.Collections([0x06, 0x02]));

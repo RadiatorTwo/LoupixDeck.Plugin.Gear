@@ -59,9 +59,19 @@ internal sealed class HidrawSysfs : IHidrawSysfs
     {
         try
         {
-            DirectoryInfo directory = new(path);
-            FileSystemInfo? target = directory.ResolveLinkTarget(returnFinalTarget: true);
-            return (target ?? directory).FullName.TrimEnd('/');
+            return SysfsPath.Canonicalize(path, ReadLink);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static string? ReadLink(string path)
+    {
+        try
+        {
+            return new FileInfo(path).LinkTarget;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
