@@ -170,3 +170,54 @@ public sealed class PulsarDpiTests
         Assert.DoesNotContain(fake.Sent, s => s[1] == PulsarProtocol.MemSet);
     }
 }
+
+public sealed class PulsarMemGetEchoTests
+{
+    private static readonly HidDeviceInfo Vendor = new("hid-ff02", 0x3710, 0x5406, 1, 0xFF02, 0x0002, 17, 17, null, "Pulsar", "dongle");
+
+    private static byte[] MemGetReply(int address, byte length, params byte[] data)
+    {
+        return PulsarProtocol.Frame(PulsarProtocol.MemGet, [0, (byte)(address >> 8), (byte)address, length, .. data]);
+    }
+
+    private static byte[] InfoReply()
+    {
+        return PulsarProtocol.Frame(PulsarProtocol.Info, [0, 0, 0, 8, 0, 0, 0, 0, 0x57, 0x17, 1]);
+    }
+
+    [Fact]
+    public async Task ReadPollingRate_SkipsReplyForOtherAddress()
+    {
+        FakeHidConnection fake = new(sent => sent[1] == PulsarProtocol.MemGet
+            ? [MemGetReply(0x0010, 2, 0x01, 0x54), MemGetReply(0x0000, 2, 0x20, 0x35)]
+            : []);
+        using PulsarDevice device = new(Vendor, new FakeHidTransport(fake), "Pulsar", true);
+
+        Assert.Equal(4000, await device.ReadPollingRateAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ReadPollingRate_OnlyMismatchingReplies_IsNoAnswer()
+    {
+        FakeHidConnection fake = new(sent => sent[1] == PulsarProtocol.MemGet ? [MemGetReply(0x0010, 2, 0x20, 0x35)] : []);
+        using PulsarDevice device = new(Vendor, new FakeHidTransport(fake), "Pulsar", true);
+
+        Assert.Null(await device.ReadPollingRateAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SetDpiValue_OnlyMismatchingReplies_WritesNothing()
+    {
+        FakeHidConnection fake = new(sent => sent[1] switch
+        {
+            PulsarProtocol.Info => [InfoReply()],
+            PulsarProtocol.MemGet => [MemGetReply(0x0100, 4, 0x04, 0x51, 0x02, 0x53)],
+            _ => [],
+        });
+        using PulsarDevice device = new(Vendor, new FakeHidTransport(fake), "Pulsar", true);
+        await device.RefreshIdentityAsync(CancellationToken.None);
+
+        await Assert.ThrowsAsync<TimeoutException>(() => device.SetDpiValueAsync(800, CancellationToken.None));
+        Assert.DoesNotContain(fake.Sent, s => s[1] == PulsarProtocol.MemSet);
+    }
+}

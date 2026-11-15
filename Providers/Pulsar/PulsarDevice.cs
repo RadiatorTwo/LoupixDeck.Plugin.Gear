@@ -215,7 +215,7 @@ internal sealed class PulsarDevice : IGearDevice
         await WriteDpiAsync(PulsarDpi.ActiveStageWrite(stage), async () => (await ReadDpiAsync(ct))?.ActiveStage == stage, ct);
     }
 
-    /// <summary>Sets the DPI value of the active stage.</summary>
+    /// <summary>Sets the DPI value of the active stage; a value between two encodable steps snaps to the nearest one.</summary>
     public async Task SetDpiValueAsync(int dpi, CancellationToken ct)
     {
         EnsureDpiModel();
@@ -356,7 +356,9 @@ internal sealed class PulsarDevice : IGearDevice
             }
 
             ReadOnlySpan<byte> report = buffer.AsSpan(0, count);
-            if (PulsarProtocol.IsValidReply(report, cmd))
+            // Every open handle receives every report, so a MemGet reply only counts if it echoes address and length.
+            if (PulsarProtocol.IsValidReply(report, cmd)
+                && (cmd != PulsarProtocol.MemGet || report.Slice(3, 3).SequenceEqual(request.AsSpan(3, 3))))
             {
                 return report.ToArray();
             }
