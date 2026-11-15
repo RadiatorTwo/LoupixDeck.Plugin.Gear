@@ -48,6 +48,8 @@ internal sealed class PulsarDevice : IGearDevice
 
     public string Name => _deviceInfo is { } i ? PulsarModels.NameForModel(i.ModelId) : _receiverName;
 
+    public string ShortName => PulsarModels.ShortName(Name);
+
     public GearLink Link => _deviceInfo is { } i ? PulsarModels.LinkFromByte(i.Link) : GearLink.Unknown;
 
     // The DPI register layout is only established for the X2 CrazyLight (see PulsarDpi).

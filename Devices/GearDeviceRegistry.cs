@@ -529,7 +529,7 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
     private static GearDeviceState Build(Entry entry, GearAvailability availability, int? percent, bool charging, int? millivolts, int? rate, GearDpiState? dpi, DateTimeOffset? lastContact)
     {
         IGearDevice d = entry.Device;
-        return new GearDeviceState(d.Key, d.Name, d.Link, d.Capabilities, d.Tested, availability, percent, charging, millivolts, rate, dpi, lastContact);
+        return new GearDeviceState(d.Key, d.Name, d.Link, d.Capabilities, d.Tested, availability, percent, charging, millivolts, rate, dpi, lastContact, d.ShortName);
     }
 
     // Stores the state unless the entry was removed meanwhile; true if the visible state changed.

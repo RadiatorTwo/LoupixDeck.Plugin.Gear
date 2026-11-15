@@ -39,7 +39,8 @@ internal static class GearPageSelection
             }
         }
 
-        return pages;
+        // Without a device there is nothing to show; the overview alone would be an empty header.
+        return devices.Count == 0 ? [] : pages;
     }
 }
 

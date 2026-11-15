@@ -28,7 +28,7 @@ internal static class OverviewPage
             string percent = device.Percent is { } value ? $"{value}%" : "--";
             uint color = device.Percent is null || asleep ? p.Dim : TileDrawing.StateColor(p, DevicePage.StateOf(device));
 
-            surface.Text(TileDrawing.Fit(device.Name, TileDrawing.W - PixelFont.Measure(percent) - 3), TileDrawing.L, y, asleep ? p.Dim : p.Text);
+            surface.Text(TileDrawing.Fit(device.DisplayName, TileDrawing.W - PixelFont.Measure(percent) - 3), TileDrawing.L, y, asleep ? p.Dim : p.Text);
             surface.TextRight(percent, TileDrawing.R, y, color);
         }
     }

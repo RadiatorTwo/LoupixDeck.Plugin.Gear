@@ -40,9 +40,14 @@ public sealed class GearPageSelectionTests
         Assert.Equal(2, pages.Count);
     }
 
-    [Fact]
-    public void NoDevices_OnlyOverviewRemains_AndUnknownKeyYieldsNothing()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("all")]
+    [InlineData("overview")]
+    [InlineData("overview|a")]
+    public void NoDevices_ResolvesToNoPages(string? selection)
     {
-        Assert.Empty(GearPageSelection.Resolve(["a"], []));
+        Assert.Empty(GearPageSelection.Resolve([selection], []));
     }
 }

@@ -130,4 +130,19 @@ public sealed class DevicePageTests
         PixelSurface surface = new(90, 90, P);
         OverviewPage.Draw(surface, [], null, true, text => text);
     }
+
+    [Fact]
+    public void ShortName_IsShownInsteadOfTheVendorPrefixedName()
+    {
+        GearDeviceState full = Device(name: "Pulsar X2 CrazyLight") with { ShortName = "X2 CrazyLight" };
+        GearDeviceState bare = Device(name: "X2 CrazyLight");
+
+        Assert.Equal(Render(bare).ContentHash(), Render(full).ContentHash());
+
+        PixelSurface overviewFull = new(90, 90, P);
+        OverviewPage.Draw(overviewFull, [full], null, true, text => text);
+        PixelSurface overviewBare = new(90, 90, P);
+        OverviewPage.Draw(overviewBare, [bare], null, true, text => text);
+        Assert.Equal(overviewBare.ContentHash(), overviewFull.ContentHash());
+    }
 }

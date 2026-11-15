@@ -55,6 +55,13 @@ internal static class PulsarModels
         return ModelNames.TryGetValue(modelId, out string? name) ? name : $"Pulsar {modelId:x4}";
     }
 
+    /// <summary>The model name without the "Pulsar " vendor prefix; the full name when nothing remains.</summary>
+    public static string ShortName(string name)
+    {
+        const string prefix = "Pulsar ";
+        return name.StartsWith(prefix, StringComparison.Ordinal) && name.Length > prefix.Length ? name[prefix.Length..] : name;
+    }
+
     public static GearLink LinkFromByte(byte link)
     {
         return link switch

@@ -48,7 +48,7 @@ internal static class DevicePage
     {
         PixelPalette p = surface.Palette;
         TileState state = StateOf(device);
-        TileDrawing.Header(surface, device.Name, pageIndex, state, blinkOn);
+        TileDrawing.Header(surface, device.DisplayName, pageIndex, state, blinkOn);
 
         bool asleep = device.Availability == GearAvailability.Asleep;
         if (device.Percent is { } percent)

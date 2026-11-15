@@ -46,7 +46,15 @@ internal sealed class GearPagesCommand(IGearDeviceSource devices, Func<string, s
     /// </summary>
     public Task Execute(CommandContext ctx)
     {
-        _cycles.GetOrAdd(PositionKey(ctx), _ => new Cycle()).Press();
+        try
+        {
+            _cycles.GetOrAdd(PositionKey(ctx), _ => new Cycle()).Press();
+        }
+        catch (Exception)
+        {
+            // A key press must never throw into the host; the page simply stays.
+        }
+
         return Task.CompletedTask;
     }
 
@@ -106,7 +114,7 @@ internal sealed class GearPagesCommand(IGearDeviceSource devices, Func<string, s
     /// <summary>The pressed/rendered button; on a host without button keys, every button whose
     /// (first) command carries the same page list shares one position.</summary>
     private static string PositionKey(CommandContext ctx) =>
-        ButtonKeys.For(ctx, "pages:" + string.Join("|", ctx.Parameters));
+        ButtonKeys.For(ctx, "pages:" + string.Join("|", ctx.Parameters ?? []));
 
     /// <summary>Page position of one button, advanced once per press.</summary>
     private sealed class Cycle

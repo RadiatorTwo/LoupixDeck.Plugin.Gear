@@ -14,6 +14,9 @@ internal interface IGearDevice : IDisposable
 
     string Name { get; }
 
+    /// <summary>Name without the vendor prefix for narrow displays.</summary>
+    string ShortName => Name;
+
     GearLink Link { get; }
 
     GearCapabilities Capabilities { get; }
