@@ -16,5 +16,14 @@
   "Pages": "Páginas",
   "Next": "Siguiente",
   "Previous": "Anterior",
-  "Polling rate": "Frecuencia de sondeo"
+  "Polling rate": "Frecuencia de sondeo",
+  "Gear Pages": "Páginas de Gear",
+  "Show battery, polling rate and DPI of your mice on a touch button; press it for the next page": "Muestra batería, frecuencia de sondeo y DPI de tus ratones en un botón táctil; púlsalo para ver la página siguiente",
+  "Gear Polling Rate": "Frecuencia de sondeo de Gear",
+  "Show the polling rate of a mouse and switch it: next or a rate in Hz": "Muestra la frecuencia de sondeo de un ratón y la cambia: next o una frecuencia en Hz",
+  "Gear DPI": "DPI de Gear",
+  "Show the DPI of a mouse and switch it: next, previous or a DPI value": "Muestra los DPI de un ratón y los cambia: next, previous o un valor de DPI",
+  "Rate": "Frecuencia",
+  "Dpi": "DPI",
+  "Device": "Dispositivo"
 }

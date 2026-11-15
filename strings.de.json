@@ -16,5 +16,14 @@
   "Pages": "Seiten",
   "Next": "Weiter",
   "Previous": "Zurück",
-  "Polling rate": "Abfragerate"
+  "Polling rate": "Abfragerate",
+  "Gear Pages": "Gear-Seiten",
+  "Show battery, polling rate and DPI of your mice on a touch button; press it for the next page": "Akku, Abfragerate und DPI deiner Mäuse auf einer Touch-Taste anzeigen; ein Druck zeigt die nächste Seite",
+  "Gear Polling Rate": "Gear-Abfragerate",
+  "Show the polling rate of a mouse and switch it: next or a rate in Hz": "Die Abfragerate einer Maus anzeigen und umschalten: next oder eine Rate in Hz",
+  "Gear DPI": "Gear-DPI",
+  "Show the DPI of a mouse and switch it: next, previous or a DPI value": "Die DPI einer Maus anzeigen und umschalten: next, previous oder ein DPI-Wert",
+  "Rate": "Rate",
+  "Dpi": "DPI",
+  "Device": "Gerät"
 }
