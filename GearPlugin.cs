@@ -3,6 +3,7 @@ using LoupixDeck.Plugin.Gear.Devices;
 using LoupixDeck.Plugin.Gear.Hid;
 using LoupixDeck.Plugin.Gear.Providers.Logitech;
 using LoupixDeck.Plugin.Gear.Providers.Pulsar;
+using LoupixDeck.Plugin.Gear.Providers.SteelSeries;
 using LoupixDeck.PluginSdk;
 
 namespace LoupixDeck.Plugin.Gear;
@@ -49,7 +50,7 @@ public sealed class GearPlugin : LoupixPlugin, IMenuContributor
                 transport = new UnsupportedHidTransport();
             }
 
-            GearDeviceRegistry registry = new(transport, [new PulsarProvider(), new LogitechProvider()], host.Logger, TimeProvider.System);
+            GearDeviceRegistry registry = new(transport, [new PulsarProvider(), new LogitechProvider(), new SteelSeriesProvider()], host.Logger, TimeProvider.System);
             _registry = registry;
 
             _commands.Add(new GearPagesCommand(registry, host.Tr));

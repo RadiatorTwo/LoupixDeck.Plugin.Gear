@@ -74,7 +74,7 @@ internal sealed class GearMenu(IGearDeviceSource devices, Func<string, string> t
                 Command(tr("Next"), DpiCommand.CommandName, Request("Dpi", GearCommandParameters.Next, key)),
                 Command(tr("Previous"), DpiCommand.CommandName, Request("Dpi", GearCommandParameters.Previous, key)),
             ];
-            // Fixed values: the mouse's DPI stages as last read (Pulsar: stored stages; Logitech: the ladder).
+            // Fixed values: the mouse's DPI stages as last read (Pulsar: stored stages; Logitech and SteelSeries: the ladder).
             dpis.AddRange((device.Dpi?.Stages ?? []).Distinct().Order().Select(dpi =>
                 Command($"{dpi} {tr("DPI")}", DpiCommand.CommandName,
                     Request("Dpi", dpi.ToString(CultureInfo.InvariantCulture), key))));
