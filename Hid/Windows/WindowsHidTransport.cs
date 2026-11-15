@@ -92,8 +92,9 @@ internal sealed partial class WindowsHidTransport : IHidTransport
             caps.Usage,
             caps.InputReportByteLength,
             caps.OutputReportByteLength,
-            HidNative.ReadString(handle, serial: true),
-            HidNative.ReadString(handle, serial: false),
+            // HidD_Get*String can block for seconds on some devices and the scan runs every few seconds.
+            null,
+            null,
             ParseContainerKey(path));
     }
 

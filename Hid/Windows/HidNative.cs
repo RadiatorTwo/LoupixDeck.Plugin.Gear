@@ -73,14 +73,6 @@ internal static unsafe partial class HidNative
 
     [LibraryImport("hid.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool HidD_GetSerialNumberString(SafeFileHandle handle, char* buffer, uint bufferBytes);
-
-    [LibraryImport("hid.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool HidD_GetProductString(SafeFileHandle handle, char* buffer, uint bufferBytes);
-
-    [LibraryImport("hid.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool HidD_SetOutputReport(SafeFileHandle handle, byte* report, uint length);
 
     /// <summary>Device paths of all present HID interfaces.</summary>
@@ -135,22 +127,5 @@ internal static unsafe partial class HidNative
         }
 
         return [];
-    }
-
-    public static string? ReadString(SafeFileHandle handle, bool serial)
-    {
-        const int Chars = 127;
-        char* buffer = stackalloc char[Chars];
-        new Span<char>(buffer, Chars).Clear();
-        bool ok = serial
-            ? HidD_GetSerialNumberString(handle, buffer, Chars * sizeof(char))
-            : HidD_GetProductString(handle, buffer, Chars * sizeof(char));
-        if (!ok)
-        {
-            return null;
-        }
-
-        string value = new string(buffer);
-        return value.Length == 0 ? null : value;
     }
 }
