@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>default</LangVersion>
+    <DebugType>embedded</DebugType>
+    <!-- The HID backends use P/Invoke and raw buffers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Produces a .deps.json and copies dependencies next to the plugin DLL
+         so the host's AssemblyDependencyResolver can locate them. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Plugin icon, read from the assembly so it does not depend on the install layout. -->
+    <EmbeddedResource Include="icon.png" LogicalName="LoupixDeck.Plugin.Gear.icon.png" Condition="Exists('icon.png')" />
+    <InternalsVisibleTo Include="LoupixDeck.Plugin.Gear.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The SDK is shared from the host at runtime: compile against it but do
+         not copy it into the plugin folder. -->
+    <PackageReference Include="LoupixDeck.PluginSdk" Version="1.31.1">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+
+    <!-- RenderKit is not provided by the host: its DLL ships inside the plugin package. -->
+    <PackageReference Include="LoupixDeck.RenderKit" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The host reads these straight off disk next to plugin.json. -->
+    <Content Include="strings.*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The test project lives below the plugin folder; keep its sources out of the plugin. -->
+    <Compile Remove="tests/**" />
+    <EmbeddedResource Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,12 @@
+{
+  "id": "gear",
+  "name": "Gear",
+  "version": "1.0.0",
+  "sdkVersion": "1.31",
+  "entryAssembly": "LoupixDeck.Plugin.Gear.dll",
+  "platform": "All",
+  "author": "RadiatorTwo",
+  "description": "Detects gaming mice and shows battery, polling rate and DPI; switches polling rate and DPI.",
+  "projectUrl": "https://github.com/RadiatorTwo/LoupixDeck.Plugin.Gear",
+  "iconFile": ""
+}
