@@ -284,6 +284,34 @@ public sealed class GearDeviceRegistryTests : IDisposable
         Assert.Empty(_logger.Errors);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WriteCommands_WhileAsleepOrWithoutAccess_SendNothing(bool noAccess)
+    {
+        FakeDevice device = await PlugInAsync();
+        if (noAccess)
+        {
+            device.Failure = new HidAccessException("denied");
+        }
+        else
+        {
+            device.Awake = false;
+        }
+
+        _time.Advance(TimeSpan.FromMinutes(6));
+        await _registry.TickAsync();
+        int before = device.WriteCalls;
+
+        Assert.False(await _registry.SetPollingRateAsync(null, 500));
+        Assert.False(await _registry.CyclePollingRateAsync(null));
+        Assert.False(await _registry.SetDpiAsync(null, 800));
+        Assert.False(await _registry.StepDpiAsync(null, 1));
+
+        Assert.Equal(before, device.WriteCalls);
+        Assert.Equal(noAccess ? GearAvailability.NoAccess : GearAvailability.Asleep, _registry.Devices[0].Availability);
+    }
+
     [Fact]
     public async Task WriteCommand_ThrowsThenSucceeds_ReturnsToAwake()
     {

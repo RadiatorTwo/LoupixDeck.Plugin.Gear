@@ -442,6 +442,12 @@ internal sealed class GearDeviceRegistry(IHidTransport transport, IReadOnlyList<
                 return false;
             }
 
+            // A sleeping mouse (or one we may not open) cannot acknowledge a write: sending it would only mark the device as failed.
+            if (entry.State?.Availability is GearAvailability.Asleep or GearAvailability.NoAccess)
+            {
+                return false;
+            }
+
             try
             {
                 ok = await command(entry.Device, ct).ConfigureAwait(false);
