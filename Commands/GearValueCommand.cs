@@ -38,7 +38,11 @@ internal abstract class GearValueCommand(IGearDeviceControl devices, Func<string
     /// <summary>Sends the request; false: it was rejected (or failed) and the tile shows "?".</summary>
     protected abstract Task<bool> Send(string? request, string? deviceKey);
 
-    protected abstract (string? Value, string? Unit, string? Detail) Describe(GearDeviceState device);
+    /// <summary>What a press sets, as hero text (a value, NEXT, PREV) with an optional unit; Text null: the request is invalid.</summary>
+    protected abstract (string? Text, string? Unit) Target(string? request);
+
+    /// <summary>The current value with its unit and an optional detail row; nulls while unknown.</summary>
+    protected abstract (string? Current, string? Detail) Describe(GearDeviceState device);
 
     public async Task Execute(CommandContext ctx)
     {
@@ -94,10 +98,11 @@ internal abstract class GearValueCommand(IGearDeviceControl devices, Func<string
         IReadOnlyList<GearDeviceState> snapshot = devices.Devices;
         GearDeviceState? device = devices.Find(Parameter(ctx, 1));
         bool invalid = _rejectedAt.TryGetValue(ButtonKey(ctx), out IReadOnlyList<GearDeviceState>? rejected) && ReferenceEquals(rejected, snapshot);
-        (string? value, string? unit, string? detail) = device is not null && device.Capabilities.HasFlag(Capability)
+        (string? target, string? targetUnit) = Target(Parameter(ctx, 0));
+        (string? current, string? detail) = device is not null && device.Capabilities.HasFlag(Capability)
             ? Describe(device)
-            : (null, null, null);
-        ValueTile.Draw(surface, tr, tr(Header), device, value, unit, detail, invalid, blinkOn);
+            : (null, null);
+        ValueTile.Draw(surface, tr, tr(Header), device, target, targetUnit, current, detail, invalid, blinkOn);
     }
 
     /// <summary>The host's key of the button; without one, buttons with the same parameter list share the mark.</summary>

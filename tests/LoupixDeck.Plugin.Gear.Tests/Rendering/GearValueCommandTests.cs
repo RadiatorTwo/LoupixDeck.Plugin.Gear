@@ -242,6 +242,31 @@ public sealed class GearValueCommandTests
     }
 
     [Fact]
+    public void Draw_ShowsTargetAndCurrentValue()
+    {
+        FakeControl control = new() { Devices = [Mouse()] };
+        PollingRateCommand rate = new(control, t => t, new FakeLogger());
+        DpiCommand dpi = new(control, t => t, new FakeLogger());
+
+        long[] targets =
+        [
+            Hash(s => rate.Draw(Context("next"), s, true)),
+            Hash(s => rate.Draw(Context("2000"), s, true)),
+            Hash(s => rate.Draw(Context("fast"), s, true)),
+            Hash(s => dpi.Draw(Context("next"), s, true)),
+            Hash(s => dpi.Draw(Context("previous"), s, true)),
+            Hash(s => dpi.Draw(Context("3200"), s, true)),
+        ];
+        long rateBefore = Hash(s => rate.Draw(Context("2000"), s, true));
+        long dpiBefore = Hash(s => dpi.Draw(Context("3200"), s, true));
+        control.Devices = [Mouse() with { PollingRate = 4000, Dpi = new GearDpiState([800, 1600, 3200], 0) }];
+
+        Assert.Equal(targets.Length, targets.Distinct().Count());
+        Assert.NotEqual(rateBefore, Hash(s => rate.Draw(Context("2000"), s, true)));
+        Assert.NotEqual(dpiBefore, Hash(s => dpi.Draw(Context("3200"), s, true)));
+    }
+
+    [Fact]
     public async Task Execute_Rejection_MarksOnlyThePressedButton()
     {
         FakeControl control = new() { Devices = [Mouse()], Result = false };

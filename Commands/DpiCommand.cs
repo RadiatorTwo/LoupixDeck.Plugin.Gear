@@ -4,7 +4,7 @@ using LoupixDeck.PluginSdk;
 namespace LoupixDeck.Plugin.Gear.Commands;
 
 /// <summary>
-/// Shows the active DPI value and stage of a mouse; a press selects the <c>next</c> or <c>previous</c> stage or sets a DPI value.
+/// Shows the DPI value or step a press applies, with the active DPI value and stage below; a press selects the <c>next</c> or <c>previous</c> stage or sets a DPI value.
 /// </summary>
 internal sealed class DpiCommand(IGearDeviceControl devices, Func<string, string> tr, IPluginLogger logger)
     : GearValueCommand(devices, tr, logger)
@@ -41,13 +41,25 @@ internal sealed class DpiCommand(IGearDeviceControl devices, Func<string, string
         };
     }
 
-    protected override (string? Value, string? Unit, string? Detail) Describe(GearDeviceState device)
+    protected override (string? Text, string? Unit) Target(string? request)
+    {
+        GearRequest parsed = GearCommandParameters.ParseDpi(request);
+        return parsed.Kind switch
+        {
+            GearRequestKind.Next => (Tr("NEXT"), null),
+            GearRequestKind.Previous => (Tr("PREV"), null),
+            GearRequestKind.Value => (parsed.Value.ToString(), null),
+            _ => (null, null),
+        };
+    }
+
+    protected override (string? Current, string? Detail) Describe(GearDeviceState device)
     {
         if (device.Dpi is not { } dpi || dpi.ActiveStage < 0 || dpi.ActiveStage >= dpi.Stages.Count)
         {
-            return (null, null, null);
+            return (null, null);
         }
 
-        return (dpi.Stages[dpi.ActiveStage].ToString(), null, $"{Tr("STAGE")} {dpi.ActiveStage + 1}/{dpi.Stages.Count}");
+        return (dpi.Stages[dpi.ActiveStage].ToString(), $"{Tr("STAGE")} {dpi.ActiveStage + 1}/{dpi.Stages.Count}");
     }
 }
