@@ -68,7 +68,8 @@ dongle (`1038:1726`), is untested.
 - These mice **cannot report their polling rate or DPI**. Both stay empty until you set them with
   a Gear button; after that the plugin shows the value it wrote. A change made in SteelSeries GG or
   with the DPI button on the mouse is not seen, and `next` / `previous` only work once a value is
-  known.
+  known. (The Rival 650 does send an event on interface 3 when its DPI button is pressed, but it
+  carries no stage, so it is not used.)
 - Setting the DPI makes the mouse run at that value: two-slot models (Rival 650, Rival 300/310/
   500/600/700, Sensei 310, ...) get the value in both slots, newer models get a single preset. A
   value snaps to the nearest one the sensor supports.
